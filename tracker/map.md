@@ -26,15 +26,16 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Bulk-import Daniel's chess.com archives](tickets/007-bulk-archive-import.md) — username is `babadaniel`; all 499 games (Feb 2023–Aug 2026, mostly rapid, bulk from Jul 2026) live in `data/archives/YYYY-MM.json` with full PGN/clocks/ECO per game; re-runnable via `scripts/import-archives.sh`.
 - [Pick the gap-filling recommended repertoire](tickets/009-gap-filling-repertoire.md) — Italian as the White system; Caro-Kann kept vs 1.e4; Slav vs 1.d4 (formalizing his existing 1...c6/...d5 instinct); a line from his games is "worth keeping" iff it belongs to one of those three systems — all other dabbles retire from the drill set.
 - [Author the seed data — repertoire.pgn and traps.pgn](tickets/010-author-seed-pgns.md) — `data/repertoire.pgn` (22 lines: 8 Italian / 8 Caro-Kann / 6 Slav, branches picked from what the archive shows he faces) and `data/traps.pgn` (15 traps with refutations, five aimed at the 2.Bc4/2.Qh5 junk he meets constantly); both machine-validated by `scripts/validate-seeds.py`.
+- [Opening-trainer drill flow — what does a practice session feel like?](tickets/005-opening-drill-prototype.md) — two surfaces sharing one drill engine: a blended line drill (endless streak pacing + explain-why-on-miss, misses requeue, no time-based SRS) and fast puzzle cards sourced from positions he'd meet in his real games (traps/junk day one, own-game misses later); bare recite-the-line cards rejected. Prototype: `prototypes/drill-flow.html`.
 
 ## Not yet specified
 
-- Tactics puzzle mode — source, difficulty targeting for <1200, spaced repetition. Sharpens after building blocks + stack are decided.
+- Tactics puzzle mode — must feel like positions from his games (005): lichess CC0 puzzles filtered by his three systems' OpeningTags, plus own-game blunder spots once analysis exists; difficulty targeting for <1200 and scheduling still open. Sharpens after the stack (004).
 - Play-vs-engine mode — strength calibration for sub-1200, time controls. After building blocks + stack.
 - Own-game analysis — blunder detection depth, how findings render; must also emit "left book at move N" signals, which drive the opening trainer's miss-driven depth extension. After API research, stack, and sync design.
 - Adaptive coach — what signals feed it, how it recommends practice. Needs several modes to exist first.
 - Progress/data model tying modes together. After stack decision.
-- The v1 build itself — sliced into tasks once the stack and the opening-trainer prototype resolve.
+- The v1 build itself — waits only on the stack (004) now that the drill flow is decided (005). One small carried detail: do never-before-drilled lines get a watch-first intro pass before quizzing?
 
 ## Out of scope
 
