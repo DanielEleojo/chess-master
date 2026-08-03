@@ -28,14 +28,13 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Author the seed data — repertoire.pgn and traps.pgn](tickets/010-author-seed-pgns.md) — `data/repertoire.pgn` (22 lines: 8 Italian / 8 Caro-Kann / 6 Slav, branches picked from what the archive shows he faces) and `data/traps.pgn` (15 traps with refutations, five aimed at the 2.Bc4/2.Qh5 junk he meets constantly); both machine-validated by `scripts/validate-seeds.py`.
 - [Opening-trainer drill flow — what does a practice session feel like?](tickets/005-opening-drill-prototype.md) — two surfaces sharing one drill engine: a blended line drill (endless streak pacing + explain-why-on-miss, misses requeue, no time-based SRS) and fast puzzle cards sourced from positions he'd meet in his real games (traps/junk day one, own-game misses later); bare recite-the-line cards rejected. Prototype: `prototypes/drill-flow.html`.
 - [Pick the v1 stack and storage](tickets/004-v1-stack-and-storage.md) — Vite + React + TypeScript on Node 22+ (pacman upgrade pending, npm 12 demands it); no backend beyond a ~20-line Vite middleware saving `data/*.json`; the browser polls chess.com directly (CORS `*` + browser-cache ETag revalidation, verified live); JSON files for all storage, SQLite only if queries someday hurt; `npm run dev` is the app.
+- [Build the v1 shell — scaffold, board, opening drill on real seeds](tickets/011-build-v1-shell-drill-mode.md) — `npm run dev` now opens the real app: Vite+React shell at the repo root, `/api/data` middleware, and both 005 surfaces drilling the seed PGNs — blended line drill (weakest-first queue, explain-on-miss, requeue) and 22 trap cards — with history persisting to `data/drill-history.json`; runs on stock Node 20 (Vite pinned to 7, pacman upgrade now optional), selftest all green.
 
 ## Not yet specified
 
-- Tactics puzzle mode — must feel like positions from his games (005): lichess CC0 puzzles filtered by his three systems' OpeningTags, plus own-game blunder spots once analysis exists; difficulty targeting for <1200 and scheduling still open. Pipeline shape is now fixed (004: offline Python filter → `puzzles.json`); sharpens once the shell (011) exists.
-- Play-vs-engine mode — strength calibration for sub-1200, time controls. Sharpens once the shell (011) exists.
-- Own-game analysis — blunder detection depth, how findings render; must also emit "left book at move N" signals, which drive the opening trainer's miss-driven depth extension. After sync design (006) and the shell (011).
+- Own-game analysis — blunder detection depth, how findings render; must also emit "left book at move N" signals, which drive the opening trainer's miss-driven depth extension. After sync design (006); the shell it renders into now exists (011). Own-game blunder spots also feed the tactics deck (013) once this exists.
 - Adaptive coach — what signals feed it, how it recommends practice. Needs several modes to exist first.
-- Progress/data model tying modes together — storage medium settled (004: JSON files in `data/`); which files and schemas emerges as modes get built.
+- Progress/data model tying modes together — `data/drill-history.json` (011) is the first piece; how puzzle, sparring, and analysis results join it emerges as those modes get built.
 
 ## Out of scope
 
