@@ -10,7 +10,7 @@ A running local web app Daniel starts with one command and actually trains with:
 ## Notes
 
 - This effort carries execution into the map (working v1, not a spec) — wayfinder's plan-don't-do default is overridden here.
-- User: chess.com player, under ~1200 (confirm exact username when working the sync ticket).
+- User: chess.com player, under ~1200. Exact username still unconfirmed: `danielbaba029` was supplied but 404s on the chess.com API (nearby variants too; `danielbaba` exists but is a dormant unrelated account). Ask again before working [Bulk-import Daniel's chess.com archives](tickets/007-bulk-archive-import.md) or the sync ticket.
 - Ponytail mode is active: laziest working solution, off-the-shelf first (chess.js, Stockfish WASM, existing puzzle/opening data — never hand-roll chess logic).
 - Skills per session: /grilling + /domain-modeling for decisions, /prototype for UX questions, /research subagents for AFK facts.
 - Tracker: local markdown. Tickets are files in `tracker/tickets/`, frontmatter holds `type`, `status`, `assignee`, `blocked-by`. Claim = set `assignee`. Frontier = open, unassigned, all `blocked-by` tickets closed.
