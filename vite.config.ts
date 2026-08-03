@@ -6,13 +6,14 @@ import path from 'node:path'
 const DATA = path.resolve(import.meta.dirname, 'data')
 
 // GET/PUT /api/data/<name> <-> data/<name>.json (ticket 004)
+// <name> may carry an archives/ prefix for the sync loop's month files (015).
 function dataApi(): Plugin {
   return {
     name: 'data-api',
     configureServer(server) {
       server.middlewares.use('/api/data', (req, res) => {
         const name = (req.url ?? '').split('?')[0].slice(1)
-        if (!/^[\w-]+$/.test(name)) {
+        if (!/^(archives\/)?[\w-]+$/.test(name)) {
           res.statusCode = 400
           return res.end('bad name')
         }

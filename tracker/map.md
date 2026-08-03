@@ -32,11 +32,12 @@ A running local web app Daniel starts with one command and actually trains with:
 
 - [Do never-before-drilled lines get a watch-first intro pass?](tickets/012-watch-first-intro-pass.md) — no: cold-start stands (misses teach), softened only by a stats-side grace — a line's first-ever miss isn't recorded in drill history (teaching/requeue unchanged), while a first-attempt hit counts.
 - [How does "instant" game sync work?](tickets/006-instant-game-sync-design.md) — tab visibility drives cadence (10s visible / 60s hidden / 5s burst ~3 min after an arrival), no presence lookups or unofficial endpoints; arrival = persist + non-blocking toast + unseen flag for future analysis, never interrupting a drill; honest promise is ~10–15s while visible (5s server cache is the floor) with only a tiny "last synced" line as UI.
+- [Build the live sync loop](tickets/015-build-live-sync.md) — 006's design now runs in the shell (`src/lib/sync.ts` + `archives/` prefix on the 004 middleware): month-file uuid-diff, corner toasts, unseen uuids in `data/sync-state.json`, "last synced" line; verified live when a real bullet game arrived mid-session and toasted within one poll.
 
 ## Not yet specified
 
 - Adaptive coach — what signals feed it, how it recommends practice. Needs several modes to exist first.
-- Progress/data model tying modes together — `data/drill-history.json` (011) is the first piece, sync state (015) the next; how puzzle, sparring, and analysis results join it emerges as those modes get built.
+- Progress/data model tying modes together — `data/drill-history.json` (011) and `data/sync-state.json` unseen-uuids (015) now exist; how puzzle, sparring, and analysis results join them emerges as those modes get built (016 consumes the unseen flags).
 
 ## Out of scope
 

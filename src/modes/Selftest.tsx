@@ -4,6 +4,7 @@ import type { Line } from '../lib/pgn'
 import { makeDrill, userMoveIdxs } from '../lib/drill'
 import { buildDeck } from './TrapCards'
 import { bump, type Stat } from '../lib/history'
+import { describeGame, monthKey, newGames, type Game } from '../lib/sync'
 
 // Ported from the prototype's ?selftest=1 — same logic checks, now against the
 // fetched real seed files, plus a middleware round-trip. The app's one check.
@@ -59,6 +60,22 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     bump(g, 'y', false)
     ok('first-attempt hit credited', g.y.seen === 1 && g.y.missed === 0)
 
+    // live sync helpers (ticket 015)
+    const mk = (uuid: string, myResult: string, oppResult: string): Game => ({
+      uuid,
+      time_class: 'rapid',
+      white: { username: 'Opp', result: oppResult },
+      black: { username: 'BabaDaniel', result: myResult },
+    })
+    const won = mk('a', 'win', 'checkmated')
+    const lost = mk('b', 'timeout', 'win')
+    const drew = mk('c', 'stalemate', 'stalemate')
+    ok('sync diff finds only unseen uuids', newGames([won], [won, lost]).map((g) => g.uuid).join() === 'b')
+    ok('sync toast: win', describeGame(won) === 'You won vs Opp · rapid')
+    ok('sync toast: loss', describeGame(lost) === 'You lost vs Opp · rapid')
+    ok('sync toast: draw', describeGame(drew) === 'You drew vs Opp · rapid')
+    ok('month key is UTC YYYY-MM', /^\d{4}-\d{2}$/.test(monthKey(new Date())))
+
     setOut(res)
     ;(async () => {
       const payload = { probe: Math.floor(performance.now()) }
@@ -71,6 +88,14 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
         /* stays false */
       }
       setOut((o) => [...o, (roundtrip ? 'PASS' : 'FAIL') + '  data middleware PUT/GET round-trip'])
+      let archives = false
+      try {
+        const a = await (await fetch('/api/data/archives/' + monthKey(new Date()))).json()
+        archives = Array.isArray(a.games)
+      } catch {
+        /* stays false */
+      }
+      setOut((o) => [...o, (archives ? 'PASS' : 'FAIL') + '  archives/ route serves the current month'])
     })()
   }, [lines, traps])
 

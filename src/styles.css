@@ -270,3 +270,26 @@ pre {
   margin: 40px auto;
   max-width: 680px;
 }
+
+/* Sync toasts (015) — non-blocking corner stack, click to dismiss */
+.toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+.toast {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}

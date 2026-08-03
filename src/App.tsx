@@ -1,11 +1,24 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { parseGames, type Line } from './lib/pgn'
 import { emptyHistory, loadHistory, type History } from './lib/history'
+import { startSync } from './lib/sync'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
 import { Selftest } from './modes/Selftest'
 
 type Mode = 'home' | 'lines' | 'traps' | 'selftest'
+type Toast = { id: number; text: string }
+
+// "last synced Xs ago" — home screen only, no spinners (006)
+function LastSynced({ at }: { at: number }) {
+  const [, force] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 5000)
+    return () => clearInterval(t)
+  }, [])
+  if (!at) return <div className="tiny dim">syncing…</div>
+  return <div className="tiny dim">last synced {Math.max(0, Math.round((Date.now() - at) / 1000))}s ago</div>
+}
 
 export default function App() {
   const [state, setState] = useState<'loading' | 'error' | 'ready'>('loading')
@@ -16,6 +29,19 @@ export default function App() {
     new URLSearchParams(location.search).get('selftest') ? 'selftest' : 'home',
   )
   const [dealNo, setDealNo] = useState(0) // remount key: fresh session per entry
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const [syncedAt, setSyncedAt] = useState(0)
+  const toastId = useRef(0)
+
+  useEffect(
+    () =>
+      startSync({
+        onArrivals: (msgs) =>
+          setToasts((t) => [...t, ...msgs.map((text) => ({ id: ++toastId.current, text }))]),
+        onSynced: setSyncedAt,
+      }),
+    [],
+  )
 
   useEffect(() => {
     ;(async () => {
@@ -46,11 +72,32 @@ export default function App() {
     setMode(m)
   }
 
+  // Toasts float over every mode — non-blocking, stay until clicked (006)
+  const toastStack = (
+    <div className="toasts">
+      {toasts.map((t) => (
+        <button
+          key={t.id}
+          className="toast"
+          onClick={() => setToasts((ts) => ts.filter((x) => x.id !== t.id))}
+        >
+          {t.text} <span className="dim">✕</span>
+        </button>
+      ))}
+    </div>
+  )
+  const wrap = (view: ReactNode) => (
+    <>
+      {view}
+      {toastStack}
+    </>
+  )
+
   if (mode === 'lines')
-    return <LineDrill key={dealNo} lines={lines} history={h} onExit={() => setMode('home')} />
+    return wrap(<LineDrill key={dealNo} lines={lines} history={h} onExit={() => setMode('home')} />)
   if (mode === 'traps')
-    return <TrapCards key={dealNo} traps={traps} history={h} onExit={() => setMode('home')} />
-  if (mode === 'selftest') return <Selftest lines={lines} traps={traps} />
+    return wrap(<TrapCards key={dealNo} traps={traps} history={h} onExit={() => setMode('home')} />)
+  if (mode === 'selftest') return wrap(<Selftest lines={lines} traps={traps} />)
 
   const lineStats = Object.values(h.lines)
   const drilled = lineStats.reduce((n, s) => n + s.seen, 0)
@@ -58,7 +105,7 @@ export default function App() {
   const cardStats = Object.values(h.traps)
   const dealt = cardStats.reduce((n, s) => n + s.seen, 0)
   const firstTry = cardStats.reduce((n, s) => n + s.seen - s.missed, 0)
-  return (
+  return wrap(
     <div className="home">
       <h1>Chess Master</h1>
       <div className="sub">openings first — the rest hangs off this</div>
@@ -89,6 +136,7 @@ export default function App() {
       <a className="tiny" href="?selftest=1">
         selftest
       </a>
-    </div>
+      <LastSynced at={syncedAt} />
+    </div>,
   )
 }
