@@ -40,8 +40,9 @@ export function saveHistory(h: History): void {
 
 export function bump(rec: Record<string, Stat>, key: string, missed: boolean): void {
   const s = (rec[key] ??= { seen: 0, missed: 0 })
+  // ponytail: grace first attempt (ticket 012) — a first-ever miss isn't recorded; hits always count
+  if (missed && s.seen > 0) s.missed++
   s.seen++
-  if (missed) s.missed++
 }
 
 // Weakest first: most-missed, then least-seen; shuffle breaks ties.

@@ -3,6 +3,7 @@ import { Chess } from 'chess.js'
 import type { Line } from '../lib/pgn'
 import { makeDrill, userMoveIdxs } from '../lib/drill'
 import { buildDeck } from './TrapCards'
+import { bump, type Stat } from '../lib/history'
 
 // Ported from the prototype's ?selftest=1 — same logic checks, now against the
 // fetched real seed files, plus a middleware round-trip. The app's one check.
@@ -48,6 +49,15 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
       if (e.color !== cd.uc || !cd.tryMove(e.from, e.to).ok) cardsOk = false
     }
     ok('every trap card starts on the punisher and accepts its move', cardsOk)
+
+    // grace first attempt (ticket 012): first-ever miss forgiven, hits and later misses count
+    const g: Record<string, Stat> = {}
+    bump(g, 'x', true)
+    ok('first-ever miss not recorded', g.x.seen === 1 && g.x.missed === 0)
+    bump(g, 'x', true)
+    ok('second miss recorded', g.x.seen === 2 && g.x.missed === 1)
+    bump(g, 'y', false)
+    ok('first-attempt hit credited', g.y.seen === 1 && g.y.missed === 0)
 
     setOut(res)
     ;(async () => {

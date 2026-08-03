@@ -30,6 +30,8 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Pick the v1 stack and storage](tickets/004-v1-stack-and-storage.md) — Vite + React + TypeScript on Node 22+ (pacman upgrade pending, npm 12 demands it); no backend beyond a ~20-line Vite middleware saving `data/*.json`; the browser polls chess.com directly (CORS `*` + browser-cache ETag revalidation, verified live); JSON files for all storage, SQLite only if queries someday hurt; `npm run dev` is the app.
 - [Build the v1 shell — scaffold, board, opening drill on real seeds](tickets/011-build-v1-shell-drill-mode.md) — `npm run dev` now opens the real app: Vite+React shell at the repo root, `/api/data` middleware, and both 005 surfaces drilling the seed PGNs — blended line drill (weakest-first queue, explain-on-miss, requeue) and 22 trap cards — with history persisting to `data/drill-history.json`; runs on stock Node 20 (Vite pinned to 7, pacman upgrade now optional), selftest all green.
 
+- [Do never-before-drilled lines get a watch-first intro pass?](tickets/012-watch-first-intro-pass.md) — no: cold-start stands (misses teach), softened only by a stats-side grace — a line's first-ever miss isn't recorded in drill history (teaching/requeue unchanged), while a first-attempt hit counts.
+
 ## Not yet specified
 
 - Own-game analysis — blunder detection depth, how findings render; must also emit "left book at move N" signals, which drive the opening trainer's miss-driven depth extension. After sync design (006); the shell it renders into now exists (011). Own-game blunder spots also feed the tactics deck (013) once this exists.
