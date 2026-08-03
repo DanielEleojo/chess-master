@@ -24,6 +24,7 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Which openings should the trainer drill first?](tickets/003-which-openings-first.md) — blend: one-time bulk archive import derives what he plays, gaps filled from a recommended sub-1200 repertoire; both colors day one; lines seed at ~5 moves, extending miss-driven only (needs analysis mode's left-book signal); junk-punishing drills seeded from curated traps then mined from real opponents.
 - [Off-the-shelf data for a beginner repertoire and classic traps](tickets/008-repertoire-traps-data.md) — no openly licensed ready-made dataset exists for either; lichess study export gives auth-free PGN but author-copyrighted (local-use only), so hand-write a small traps.pgn (~12–20 traps + refutations) and a tiny repertoire PGN, auto-named via the CC0 openings TSV and cross-linked to CC0 puzzles via OpeningTags/attackingF2F7.
 - [Bulk-import Daniel's chess.com archives](tickets/007-bulk-archive-import.md) — username is `babadaniel`; all 499 games (Feb 2023–Aug 2026, mostly rapid, bulk from Jul 2026) live in `data/archives/YYYY-MM.json` with full PGN/clocks/ECO per game; re-runnable via `scripts/import-archives.sh`.
+- [Pick the gap-filling recommended repertoire](tickets/009-gap-filling-repertoire.md) — Italian as the White system; Caro-Kann kept vs 1.e4; Slav vs 1.d4 (formalizing his existing 1...c6/...d5 instinct); a line from his games is "worth keeping" iff it belongs to one of those three systems — all other dabbles retire from the drill set.
 
 ## Not yet specified
 
