@@ -1,0 +1,605 @@
+<!doctype html>
+<!-- PROTOTYPE — throwaway (wayfinder ticket 005): what should a 10-minute opening drill feel like?
+     Three structurally different flows, switchable via ?variant=A|B|C, arrow keys, or the bottom bar.
+       A — Card sprint : 10 "due" positions, one move each, miss = reveal-then-play-it   (spaced-rep flavor)
+       B — Streak run  : endless full lines, 2 blind retries then reveal, misses requeue (arcade flavor)
+       C — Coach       : 3 weakest lines, watch-with-comments then prove-from-memory     (lesson flavor)
+     ?selftest=1 runs the logic checks. Data = the real data/repertoire.pgn inlined. Not production code. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DRILL PROTOTYPE — Chess Master</title>
+<link rel="stylesheet" href="https://unpkg.com/chessground@9/assets/chessground.base.css">
+<link rel="stylesheet" href="https://unpkg.com/chessground@9/assets/chessground.brown.css">
+<link rel="stylesheet" href="https://unpkg.com/chessground@9/assets/chessground.cburnett.css">
+<style>
+:root{--bg:#161512;--panel:#211f1c;--ink:#e8e6e3;--dim:#9a958d;--green:#7fb069;--red:#d1603d;--gold:#dbb04a;--line:#35322d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;padding-bottom:90px}
+#app{max-width:1000px;margin:0 auto;padding:24px 16px}
+h1,h2,h3{margin:0 0 6px}
+.sub{color:var(--dim);font-size:13px}
+.dim{color:var(--dim)}
+button{background:#2c2925;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--dim)}
+.badge{display:inline-block;background:#2c2925;border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-size:12px;color:var(--dim)}
+.badge.bad{color:var(--red);border-color:var(--red)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.prompt{min-height:24px;font-weight:600;text-align:center}
+.prompt.good{color:var(--green)}.prompt.bad{color:var(--red)}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pulse{animation:pulse .25s}
+@keyframes pulse{50%{transform:scale(1.18)}}
+pre{white-space:pre-wrap;font-size:13px}
+/* variant A */
+.vA{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.dots{display:flex;gap:7px}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--line)}
+.dot.cur{outline:2px solid var(--gold);outline-offset:2px}
+.dot.good{background:var(--green)}.dot.bad{background:var(--red)}
+.vA .card{display:flex;flex-direction:column;gap:10px;align-items:center}
+.meta{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--dim);flex-wrap:wrap;justify-content:center}
+.due{color:var(--gold)}
+.sofar{font-family:ui-monospace,monospace;font-size:13px;color:var(--dim)}
+.misslist{text-align:left;margin:10px 0;padding-left:20px}
+/* variant B */
+.vB{display:grid;grid-template-columns:minmax(0,500px) 1fr;gap:24px;align-items:start}
+.linetag{margin-top:10px}
+.side{display:flex;flex-direction:column;gap:14px}
+.streakbox{text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 14px}
+.streakN{font-size:78px;font-weight:800;line-height:1;color:var(--gold)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px}
+.panel ol{margin:6px 0 0;padding-left:20px}
+.panel li{margin:3px 0}
+.overlay{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:40}
+.overlay .card{max-width:440px}
+/* variant C */
+.vC{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+.vC aside{display:flex;flex-direction:column;gap:12px}
+.vC ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.vC li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px}
+.vC li.cur{border-color:var(--gold)}
+.vC li.done{opacity:.55}
+.mbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.mfill{height:100%;background:var(--green);transition:width .8s}
+.phase{font-weight:700;letter-spacing:.09em;font-size:12px;color:var(--gold)}
+.phase.prove{color:var(--green)}
+.coach{background:#2a2721;border-left:3px solid var(--gold);padding:10px 12px;border-radius:6px;min-height:64px;font-size:14px}
+.movelist{font-family:ui-monospace,monospace;font-size:13px;color:var(--dim);margin-top:10px;max-width:440px}
+.movelist b{color:var(--ink)}
+/* switcher bar */
+.protobar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:#000;border:1px solid #444;border-radius:999px;padding:8px 16px;box-shadow:0 6px 24px #000a;z-index:50;white-space:nowrap}
+.protobar button{background:none;border:none;color:#fff;font-size:18px;padding:0 6px}
+.protobar span{font-size:13px;color:#fff}
+.protobar a{color:#666;font-size:11px;margin-left:8px;text-decoration:none}
+#errbanner{display:none;background:var(--red);color:#fff;padding:10px 16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="errbanner">A CDN script failed to load — this prototype needs internet for chessground/chess.js.</div>
+<div id="app"></div>
+<div class="protobar">
+  <button id="pPrev" title="previous variant">‹</button>
+  <span id="pLabel"></span>
+  <button id="pNext" title="next variant">›</button>
+  <a href="?selftest=1">selftest</a>
+</div>
+<script>window.addEventListener('error',()=>{document.getElementById('errbanner').style.display='block'},true)</script>
+<script type="module">
+import {Chess} from 'https://esm.sh/chess.js@1';
+import {Chessground} from 'https://esm.sh/chessground@9';
+
+// ---------- data: data/repertoire.pgn, inlined verbatim ----------
+const RAW=`[Event "Repertoire: Italian main line"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 *
+
+[Event "Repertoire: Italian, Two Knights"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 {5...Nxd5 6.Nxf7 is the Fried Liver — see traps.pgn} *
+
+[Event "Repertoire: Italian, vs Philidor setup"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 d6 3. d4 exd4 4. Nxd4 Nf6 5. Nc3 *
+
+[Event "Repertoire: Italian, vs Petrov"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nf6 3. Nxe5 d6 4. Nf3 Nxe4 5. d4 {3...Nxe4?? instead of 3...d6 is the copycat trap — see traps.pgn} *
+
+[Event "Repertoire: vs Scandinavian"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 d5 2. exd5 Qxd5 3. Nc3 Qa5 4. d4 Nf6 5. Nf3 *
+
+[Event "Repertoire: vs Alekhine"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 Nf6 2. e5 Nd5 3. d4 d6 4. Nf3 dxe5 5. Nxe5 *
+
+[Event "Repertoire: vs French, Exchange"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e6 2. d4 d5 3. exd5 exd5 4. Bd3 Bd6 5. Nf3 *
+
+[Event "Repertoire: vs Sicilian, Open"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 *
+
+[Event "Repertoire: Caro-Kann, Exchange"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d4 d5 3. exd5 cxd5 4. Bd3 Nc6 5. c3 Nf6 *
+
+[Event "Repertoire: Caro-Kann, Advance"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d4 d5 3. e5 Bf5 {bishop out BEFORE ...e6 — the whole point of the Caro} 4. Nf3 e6 5. Be2 c5 *
+
+[Event "Repertoire: Caro-Kann, Classical"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 {4...Nd7?! invites the smothered-mate trap — see traps.pgn} 5. Ng3 Bg6 *
+
+[Event "Repertoire: Caro-Kann, vs Two Knights"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Nf3 d5 3. Nc3 Bg4 4. h3 Bxf3 5. Qxf3 e6 *
+
+[Event "Repertoire: Caro-Kann, vs 2.Nc3"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Nc3 d5 3. Nf3 Bg4 {same position as the Two Knights line; 3.d4 dxe4 4.Nxe4 Bf5 transposes to the Classical} *
+
+[Event "Repertoire: Caro-Kann, vs 2.Bc4 Hillbilly"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Bc4 d5 3. exd5 cxd5 4. Bb3 Nf6 5. Nc3 Nc6 {see traps.pgn for 3.Bxd5?? and 4.Bb5+} *
+
+[Event "Repertoire: Caro-Kann, vs 2.Qh5 Wayward Queen"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Qh5 d5 3. exd5 cxd5 4. d4 Nf6 5. Qd1 Nc6 {every queen grab loses her — see traps.pgn} *
+
+[Event "Repertoire: Caro-Kann, vs 2.d3"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d3 d5 3. Nd2 e5 4. Ngf3 Bd6 *
+
+[Event "Repertoire: Slav main line"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. c4 d5 3. Nf3 Nf6 4. Nc3 e6 *
+
+[Event "Repertoire: Slav, vs London"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. Bf4 d5 3. e3 Bf5 {mirror the bishop — same idea as the Caro} 4. Nf3 e6 5. Bd3 Bxd3 6. Qxd3 Nf6 *
+
+[Event "Repertoire: Slav, vs 2.Nf3"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. Nf3 d5 3. e3 Bf5 4. Bd3 Bxd3 5. Qxd3 e6 *
+
+[Event "Repertoire: Slav, vs 2.e3"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. e3 d5 3. Bd3 Nf6 4. Nf3 Bg4 5. O-O e6 *
+
+[Event "Repertoire: Slav, vs 2.Nc3"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. Nc3 d5 3. Nf3 Nf6 4. Bf4 Bf5 5. e3 e6 *
+
+[Event "Repertoire: Slav, 2.e4 transposition"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. e4 d5 {transposes straight into the Caro-Kann — follow those lines} *`;
+
+const LINES=RAW.trim().split(/\n\s*\n(?=\[Event )/).map((chunk,idx)=>{
+  const h={};chunk.replace(/\[(\w+)\s+"([^"]*)"\]/g,(_,k,v)=>h[k]=v);
+  const c=new Chess();c.loadPgn(chunk);
+  const moves=c.history({verbose:true});
+  const comments={};c.getComments().forEach(o=>comments[o.fen]=o.comment);
+  return {idx,name:h.Event.replace(/^Repertoire:\s*/,''),system:h.System,trainAs:h.TrainAs,moves,comments};
+});
+
+// ---------- shared drill mechanics ----------
+const userMoveIdxs=l=>{const uc=l.trainAs==='White'?'w':'b';
+  return l.moves.map((m,j)=>m.color===uc?j:-1).filter(j=>j>=0);};
+
+function makeDrill(line,start=0){
+  const chess=new Chess();
+  for(let j=0;j<start;j++)chess.move(line.moves[j].san);
+  const uc=line.trainAs==='White'?'w':'b';
+  let i=start;
+  return {
+    chess,uc,
+    get i(){return i},
+    done:()=>i>=line.moves.length,
+    expected:()=>line.moves[i],
+    autoMoves(){const out=[];while(i<line.moves.length&&line.moves[i].color!==uc){chess.move(line.moves[i].san);out.push(line.moves[i]);i++}return out},
+    tryMove(from,to){
+      const exp=line.moves[i];let mv=null;
+      try{mv=chess.move({from,to})}
+      catch(_){try{mv=chess.move({from,to,promotion:'q'})}catch(_2){return{ok:false,exp,got:null}}} // ponytail: no promotion UI — 5-move lines never promote
+      if(mv.san===exp.san){i++;return{ok:true,exp,got:mv}}
+      chess.undo();return{ok:false,exp,got:mv};
+    },
+    forceExpected(){const exp=line.moves[i];chess.move(exp.san);i++;return exp},
+  };
+}
+
+function sanUpto(line,k){
+  let s='';for(let j=0;j<k;j++){const m=line.moves[j];if(m.color==='w')s+=(Math.floor(j/2)+1)+'. ';s+=m.san+' '}
+  return s.trim()||'(start position)';
+}
+
+// ---------- shared UI helpers ----------
+const app=document.getElementById('app');
+const byId=id=>document.getElementById(id);
+let epoch=0,curOnMove=null,curDrill=null;
+const later=(ms,fn)=>{const e=epoch;setTimeout(()=>{if(e===epoch)fn()},ms)};
+
+const destsOf=c=>{const m=new Map();for(const mv of c.moves({verbose:true})){if(!m.has(mv.from))m.set(mv.from,[]);m.get(mv.from).push(mv.to)}return m};
+
+function mkBoard(el,size,orientation,onMove){
+  el.style.width=el.style.height=size+'px';
+  curOnMove=onMove;
+  return Chessground(el,{orientation,coordinates:true,animation:{duration:180},
+    highlight:{lastMove:true,check:true},draggable:{showGhost:true},
+    movable:{free:false,dests:new Map()},events:{move:onMove}});
+}
+function sync(cg,chess,uc,myTurn,lm){
+  cg.set({fen:chess.fen(),turnColor:chess.turn()==='w'?'white':'black',check:chess.inCheck(),
+    lastMove:lm||undefined,
+    movable:{free:false,color:myTurn?(uc==='w'?'white':'black'):undefined,
+      dests:myTurn?destsOf(chess):new Map(),showDests:true}});
+}
+function shake(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake')}
+let AC=null;
+function beep(good){try{
+  AC??=new AudioContext();const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);o.frequency.value=good?880:170;
+  g.gain.setValueAtTime(.07,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.15);
+  o.start();o.stop(AC.currentTime+.16);
+}catch(_){}}
+
+// ============ Variant A — Card sprint ============
+const DUE=['due today','2 days overdue','5 days overdue','new card'];
+function renderA(){
+  app.innerHTML=`<div class="vA">
+    <div><h2>Card sprint</h2><div class="sub">10 cards due today · one move each · miss = see it, then play it</div></div>
+    <div class="dots" id="dots"></div>
+    <div class="card" id="card"></div></div>`;
+  const order=[...LINES].sort((a,b)=>(a.idx*7)%9-(b.idx*7)%9); // fake "dueness" — stable pseudo-random
+  const cards=order.slice(0,10).map(l=>{
+    const u=userMoveIdxs(l);
+    return {line:l,k:u[(l.idx*5)%u.length],due:DUE[(l.idx*3)%DUE.length],result:null};
+  });
+  byId('dots').innerHTML=cards.map(()=>'<span class="dot"></span>').join('');
+  const dots=[...byId('dots').children];
+  let ci=0,drill,cg,lm;
+  const paintDots=()=>dots.forEach((d,i)=>{d.className='dot'+(cards[i].result?' '+cards[i].result:'')+(i===ci?' cur':'')});
+  function show(){
+    paintDots();
+    if(ci>=cards.length)return summary();
+    const c=cards[ci],l=c.line;
+    byId('card').innerHTML=`
+      <div class="meta"><span class="badge">${l.system}</span><b>${l.name}</b><span>you are ${l.trainAs}</span><span class="due">${c.due}</span></div>
+      <div class="sofar">${sanUpto(l,c.k)}</div>
+      <div id="board"></div>
+      <div class="prompt" id="prompt">Your move.</div>`;
+    drill=makeDrill(l,c.k);curDrill=drill;
+    lm=c.k>0?[l.moves[c.k-1].from,l.moves[c.k-1].to]:null;
+    cg=mkBoard(byId('board'),400,l.trainAs.toLowerCase(),onMove);
+    sync(cg,drill.chess,drill.uc,true,lm);
+  }
+  function onMove(from,to){
+    const c=cards[ci],p=byId('prompt');
+    const r=drill.tryMove(from,to);
+    if(r.ok){
+      c.result??='good';
+      cg.setAutoShapes([]);sync(cg,drill.chess,drill.uc,false,[r.got.from,r.got.to]);
+      p.textContent=c.result==='good'?`✓ ${r.exp.san}`:`✓ ${r.exp.san} — got it after the reveal`;
+      p.className='prompt '+c.result;beep(1);paintDots();
+      later(900,()=>{ci++;show()});
+    }else{
+      const first=c.result===null;c.result??='bad';
+      p.textContent=`✗ ${r.got?r.got.san:'illegal'} — the line move is ${r.exp.san}. Play it to continue.`;
+      p.className='prompt bad';beep(0);shake(byId('board'));paintDots();
+      sync(cg,drill.chess,drill.uc,true,lm);
+      cg.setAutoShapes([{orig:r.exp.from,dest:r.exp.to,brush:'green'}]);
+    }
+  }
+  function summary(){
+    const good=cards.filter(c=>c.result==='good').length;
+    byId('card').innerHTML=`<h2>${good}/10</h2>
+      <div class="sub">${good===10?'clean sprint — nothing to review':'missed cards come back sooner next time'}</div>
+      <ul class="misslist">${cards.map(c=>`<li>${c.result==='good'?'✓':'✗'} ${c.line.name} — move ${Math.floor(c.k/2)+1} as ${c.line.trainAs}</li>`).join('')}</ul>
+      <button id="again">Run another 10</button>`;
+    byId('again').onclick=()=>go('A');
+  }
+  show();
+}
+
+// ============ Variant B — Streak run ============
+function renderB(){
+  app.innerHTML=`<div class="vB">
+    <div><div id="board"></div><div class="linetag" id="lineTag"></div><div class="prompt" id="promptB"></div></div>
+    <div class="side">
+      <div class="streakbox"><div class="streakN" id="streakN">0</div><div class="dim">streak</div><div class="dim" id="best">best 0</div></div>
+      <div class="panel"><b>Up next</b><ol id="next"></ol></div>
+      <div class="panel dim" id="totals"></div>
+      <button id="end">End session</button></div></div>`;
+  let queue=[...LINES].sort((a,b)=>(a.idx*13)%22-(b.idx*13)%22).map(l=>l.idx); // fake last-missed order
+  const missed=new Set();
+  let streak=0,best=0,linesDone=0,okMoves=0,tries=0,attempts=0;
+  let drill,lm,curIdx;
+  const cg=mkBoard(byId('board'),470,'white',onMove);
+  const setP=(t,cls)=>{const p=byId('promptB');p.textContent=t;p.className='prompt'+(cls?' '+cls:'')};
+  function paintSide(){
+    byId('streakN').textContent=streak;byId('best').textContent='best '+best;
+    byId('next').innerHTML=queue.slice(0,3).map(i=>`<li>${LINES[i].name}${missed.has(i)?' <span class="badge bad">missed</span>':''}</li>`).join('');
+    byId('totals').textContent=`${linesDone} lines · ${okMoves}/${tries} moves · ${tries?Math.round(okMoves/tries*100):100}% accuracy`;
+  }
+  function nextLine(){
+    if(!queue.length)queue=[...LINES].map(l=>l.idx); // endless — refill when exhausted
+    curIdx=queue.shift();const line=LINES[curIdx];
+    drill=makeDrill(line);curDrill=drill;lm=null;attempts=0;
+    cg.setAutoShapes([]);cg.set({orientation:line.trainAs.toLowerCase()});
+    byId('lineTag').innerHTML=`<b>${line.name}</b> <span class="badge">${line.system}</span>${missed.has(curIdx)?' <span class="badge bad">back for revenge</span>':''}`;
+    setP('');handOver();paintSide();
+  }
+  function handOver(){
+    const autos=drill.autoMoves();
+    if(autos.length){const a=autos[autos.length-1];lm=[a.from,a.to]}
+    sync(cg,drill.chess,drill.uc,!drill.done(),lm);
+    if(drill.done())later(500,lineDone);
+  }
+  function lineDone(){linesDone++;setP('Line complete ✓','good');paintSide();later(650,nextLine)}
+  function onMove(from,to){
+    tries++;
+    const r=drill.tryMove(from,to);
+    if(r.ok){
+      okMoves++;attempts=0;streak++;best=Math.max(best,streak);lm=[r.got.from,r.got.to];
+      cg.setAutoShapes([]);sync(cg,drill.chess,drill.uc,false,lm);beep(1);setP('');
+      const n=byId('streakN');n.classList.remove('pulse');void n.offsetWidth;n.classList.add('pulse');
+      if(drill.done())later(450,lineDone);else later(350,handOver);
+    }else{
+      attempts++;streak=0;missed.add(curIdx);beep(0);shake(byId('board'));
+      if(attempts>=2){ // ponytail: 2 blind tries then reveal — tune from reaction
+        const exp=drill.forceExpected();lm=[exp.from,exp.to];
+        setP(`It was ${exp.san}. Streak reset — line comes back soon.`,'bad');
+        sync(cg,drill.chess,drill.uc,false,lm);
+        if(!queue.includes(curIdx))queue.splice(2,0,curIdx); // requeue soon
+        if(drill.done())later(700,lineDone);else later(650,handOver);
+      }else{
+        setP('✗ not the line move — one more try','bad');
+        sync(cg,drill.chess,drill.uc,true,lm);
+      }
+    }
+    paintSide();
+  }
+  byId('end').onclick=()=>{
+    const div=document.createElement('div');div.className='overlay';
+    div.innerHTML=`<div class="card"><h2>Session over</h2>
+      <p>${linesDone} lines · ${okMoves}/${tries} moves · best streak <b style="color:var(--gold)">${best}</b></p>
+      <p class="dim">${missed.size?'Missed: '+[...missed].map(i=>LINES[i].name).join(', '):'Nothing missed. Machine.'}</p>
+      <button id="reB">Go again</button></div>`;
+    document.body.appendChild(div);
+    div.querySelector('#reB').onclick=()=>{div.remove();go('B')};
+  };
+  nextLine();
+}
+
+// ============ Variant C — Coach ============
+const fakeMastery=l=>(l.idx*37)%60;
+function renderC(){
+  app.innerHTML=`<div class="vC">
+    <aside>
+      <div><h2>Coach</h2><div class="sub">today: your 3 weakest lines, ~10 min</div></div>
+      <ul id="list"></ul>
+      <div class="phase" id="phase"></div>
+      <div class="coach" id="coach"></div>
+      <div><button id="action"></button></div></aside>
+    <main><div id="board"></div><div class="movelist" id="ml"></div></main></div>`;
+  const picks=[...LINES].sort((a,b)=>fakeMastery(a)-fakeMastery(b)).slice(0,3);
+  const m0=Object.fromEntries(picks.map(l=>[l.idx,fakeMastery(l)]));
+  const mastery={...m0};
+  let li=0,phase='watch',drill=null,lm=null,wrongs=0,watchChess,wi;
+  const cg=mkBoard(byId('board'),430,'white',onMove);
+  const coach=t=>byId('coach').textContent=t;
+  function paintList(){
+    byId('list').innerHTML=picks.map((l,i)=>`<li class="${i===li?'cur':i<li?'done':''}">
+      ${l.name} <span class="badge">${l.system}</span>
+      <div class="mbar"><div class="mfill" style="width:${mastery[l.idx]}%"></div></div></li>`).join('');
+  }
+  function paintPhase(){
+    const p=byId('phase');
+    p.textContent=phase==='watch'?`WATCH · line ${li+1} of 3`:`PROVE IT · line ${li+1} of 3`;
+    p.className='phase'+(phase==='prove'?' prove':'');
+  }
+  function paintML(line,upto){
+    byId('ml').innerHTML=`<b>${sanUpto(line,upto)}</b>${upto<line.moves.length?' …':''}`;
+  }
+  function startLine(){
+    if(li>=picks.length)return summary();
+    const line=picks[li];
+    phase='watch';drill=null;curDrill=null;watchChess=new Chess();wi=0;lm=null;wrongs=0;
+    cg.setAutoShapes([]);cg.set({orientation:line.trainAs.toLowerCase()});
+    sync(cg,watchChess,'w',false,null);paintList();paintPhase();paintML(line,0);
+    coach(`Watch first — I'll play through "${line.name}" with notes. Then you prove it from memory.`);
+    byId('action').textContent='Skip to quiz →';byId('action').onclick=startProve;
+    later(900,watchStep);
+  }
+  function watchStep(){
+    if(phase!=='watch')return;
+    const line=picks[li];
+    if(wi>=line.moves.length)return later(800,startProve);
+    const m=line.moves[wi];watchChess.move(m.san);lm=[m.from,m.to];wi++;
+    sync(cg,watchChess,'w',false,lm);paintML(line,wi);
+    const cmt=line.comments[m.after];
+    if(cmt)coach(`${m.san} — ${cmt}`);
+    later(cmt?2300:850,watchStep);
+  }
+  function startProve(){
+    if(phase==='prove')return;
+    phase='prove';const line=picks[li];
+    drill=makeDrill(line);curDrill=drill;lm=null;wrongs=0;
+    cg.setAutoShapes([]);paintPhase();paintML(line,0);
+    coach('Your turn — same line, from memory.');
+    byId('action').textContent='Show me the move';
+    byId('action').onclick=()=>{if(drill&&!drill.done()){const e=drill.expected();cg.setAutoShapes([{orig:e.from,dest:e.to,brush:'yellow'}])}};
+    handOver();
+  }
+  function handOver(){
+    const autos=drill.autoMoves();
+    if(autos.length){const a=autos[autos.length-1];lm=[a.from,a.to]}
+    const line=picks[li];paintML(line,drill.i);
+    sync(cg,drill.chess,drill.uc,!drill.done(),lm);
+    if(drill.done())later(500,lineDone);
+  }
+  function lineDone(){
+    const line=picks[li];
+    mastery[line.idx]=Math.min(95,mastery[line.idx]+30);
+    coach(`Locked in — "${line.name}" mastery up to ${mastery[line.idx]}%.`);
+    paintList();li++;later(1400,startLine);
+  }
+  function onMove(from,to){
+    if(phase!=='prove'||!drill)return;
+    const line=picks[li];
+    const r=drill.tryMove(from,to);
+    if(r.ok){
+      wrongs=0;lm=[r.got.from,r.got.to];
+      cg.setAutoShapes([]);sync(cg,drill.chess,drill.uc,false,lm);beep(1);paintML(line,drill.i);
+      const cmt=line.comments[r.exp.after];
+      coach(cmt?`✓ ${r.exp.san} — ${cmt}`:`✓ ${r.exp.san}`);
+      if(drill.done())later(500,lineDone);else later(350,handOver);
+    }else{
+      wrongs++;beep(0);shake(byId('board'));
+      const cmt=line.comments[r.exp.after];
+      const piece={p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'}[r.exp.piece];
+      coach(`Not ${r.got?r.got.san:'that'}. `+(cmt?`Remember: ${cmt}`:`Hint: it's a ${piece} move — think about what the ${line.system} wants here.`));
+      sync(cg,drill.chess,drill.uc,true,lm);
+      if(wrongs>=2)cg.setAutoShapes([{orig:r.exp.from,dest:r.exp.to,brush:'green'}]);
+    }
+  }
+  function summary(){
+    app.querySelector('main').innerHTML=`<div class="card"><h2>Session done</h2>
+      <p>Three lines, coached and proved:</p>
+      <ul class="misslist">${picks.map(l=>`<li>${l.name}: ${m0[l.idx]}% → <b style="color:var(--green)">${mastery[l.idx]}%</b></li>`).join('')}</ul>
+      <button id="reC">New session</button></div>`;
+    byId('phase').textContent='';coach('Same time tomorrow.');
+    byId('reC').onclick=()=>go('C');
+  }
+  startLine();
+}
+
+// ---------- selftest (?selftest=1) ----------
+function renderSelftest(){
+  const out=[];const ok=(n,c)=>out.push((c?'PASS':'FAIL')+'  '+n);
+  ok(`parsed ${LINES.length} lines (expect 22)`,LINES.length===22);
+  for(const l of LINES){
+    let legal=true;const c=new Chess();
+    try{for(const m of l.moves)c.move(m.san)}catch(_){legal=false}
+    ok(`${l.name}: ${l.moves.length} plies replay legally, has ${l.trainAs} moves`,
+      legal&&l.moves.length>=4&&userMoveIdxs(l).length>=1);
+  }
+  const d=makeDrill(LINES[0]);d.autoMoves();
+  ok('drill starts on user turn',!d.done()&&d.expected().color===d.uc);
+  const w=d.tryMove('a2','a3');
+  ok('wrong move rejected and position restored',!w.ok&&d.chess.fen()===new Chess().fen());
+  let steps=0;
+  while(!d.done()&&steps++<40){
+    const e=d.expected();
+    if(e.color===d.uc){if(!d.tryMove(e.from,e.to).ok)break}
+    else d.autoMoves();
+  }
+  ok('full line completes on correct moves',d.done());
+  const l2=LINES[8],u=userMoveIdxs(l2),d2=makeDrill(l2,u[u.length-1]);
+  ok('mid-line card starts on a user move',d2.expected().color===d2.uc);
+  ok('mid-line card accepts the line move',d2.tryMove(d2.expected().from,d2.expected().to).ok);
+  const fails=out.filter(s=>s.startsWith('FAIL')).length;
+  app.innerHTML=`<div class="card" style="margin:40px auto;max-width:680px"><h2>Selftest ${fails?'❌ '+fails+' failing':'✅ all green'}</h2><pre>${out.join('\n')}</pre><p><a href="?variant=A" style="color:var(--gold)">back to the prototype</a></p></div>`;
+}
+
+// ---------- variant switcher ----------
+const renderers={A:renderA,B:renderB,C:renderC};
+const LABELS={A:'A — Card sprint · 10 due cards',B:'B — Streak run · endless',C:'C — Coach · 3 weakest lines'};
+let VAR='A';
+function go(v){
+  epoch++;VAR=v;curDrill=null;curOnMove=null;
+  history.replaceState(null,'',location.pathname+'?variant='+v);
+  document.querySelectorAll('.overlay').forEach(o=>o.remove());
+  app.innerHTML='';renderers[v]();
+  byId('pLabel').textContent=LABELS[v];
+}
+const cycle=d=>{const ks=['A','B','C'];go(ks[(ks.indexOf(VAR)+d+3)%3])};
+byId('pPrev').onclick=()=>cycle(-1);
+byId('pNext').onclick=()=>cycle(1);
+addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA/.test(e.target.tagName)||e.target.isContentEditable)return;
+  if(e.key==='ArrowLeft')cycle(-1);else if(e.key==='ArrowRight')cycle(1);
+});
+
+window.proto={go,lines:LINES, // hooks for driving the prototype from the console
+  play:(f,t)=>curOnMove&&curOnMove(f,t),
+  expected:()=>curDrill&&!curDrill.done()?curDrill.expected():null};
+
+const params=new URLSearchParams(location.search);
+if(params.get('selftest'))renderSelftest();
+else{const v=(params.get('variant')||'A').toUpperCase();go(renderers[v]?v:'A')}
+</script>
+</body>
+</html>
