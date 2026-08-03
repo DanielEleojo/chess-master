@@ -19,6 +19,8 @@ A running local web app Daniel starts with one command and actually trains with:
 
 <!-- one line per closed ticket: [title](tickets/file.md) — gist -->
 
+- [Off-the-shelf chess building blocks for a local web app](tickets/002-chess-building-blocks.md) — chessground + chess.js + stockfish.js lite (Skill Level, not UCI_Elo, for weak play) + lichess CC0 openings TSV & puzzle DB; hand-roll nothing.
+
 ## Not yet specified
 
 - Tactics puzzle mode — source, difficulty targeting for <1200, spaced repetition. Sharpens after building blocks + stack are decided.
