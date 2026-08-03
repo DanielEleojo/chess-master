@@ -10,7 +10,7 @@ A running local web app Daniel starts with one command and actually trains with:
 ## Notes
 
 - This effort carries execution into the map (working v1, not a spec) — wayfinder's plan-don't-do default is overridden here.
-- User: chess.com player, under ~1200. Exact username still unconfirmed: `danielbaba029` was supplied but 404s on the chess.com API (nearby variants too; `danielbaba` exists but is a dormant unrelated account). Ask again before working [Bulk-import Daniel's chess.com archives](tickets/007-bulk-archive-import.md) or the sync ticket.
+- User: chess.com username `babadaniel` (confirmed live: rapid 335, blitz 125, bullet 132 — sub-1200 everywhere).
 - Ponytail mode is active: laziest working solution, off-the-shelf first (chess.js, Stockfish WASM, existing puzzle/opening data — never hand-roll chess logic).
 - Skills per session: /grilling + /domain-modeling for decisions, /prototype for UX questions, /research subagents for AFK facts.
 - Tracker: local markdown. Tickets are files in `tracker/tickets/`, frontmatter holds `type`, `status`, `assignee`, `blocked-by`. Claim = set `assignee`. Frontier = open, unassigned, all `blocked-by` tickets closed.
@@ -23,6 +23,7 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Off-the-shelf chess building blocks for a local web app](tickets/002-chess-building-blocks.md) — chessground + chess.js + stockfish.js lite (Skill Level, not UCI_Elo, for weak play) + lichess CC0 openings TSV & puzzle DB; hand-roll nothing.
 - [Which openings should the trainer drill first?](tickets/003-which-openings-first.md) — blend: one-time bulk archive import derives what he plays, gaps filled from a recommended sub-1200 repertoire; both colors day one; lines seed at ~5 moves, extending miss-driven only (needs analysis mode's left-book signal); junk-punishing drills seeded from curated traps then mined from real opponents.
 - [Off-the-shelf data for a beginner repertoire and classic traps](tickets/008-repertoire-traps-data.md) — no openly licensed ready-made dataset exists for either; lichess study export gives auth-free PGN but author-copyrighted (local-use only), so hand-write a small traps.pgn (~12–20 traps + refutations) and a tiny repertoire PGN, auto-named via the CC0 openings TSV and cross-linked to CC0 puzzles via OpeningTags/attackingF2F7.
+- [Bulk-import Daniel's chess.com archives](tickets/007-bulk-archive-import.md) — username is `babadaniel`; all 499 games (Feb 2023–Aug 2026, mostly rapid, bulk from Jul 2026) live in `data/archives/YYYY-MM.json` with full PGN/clocks/ECO per game; re-runnable via `scripts/import-archives.sh`.
 
 ## Not yet specified
 
