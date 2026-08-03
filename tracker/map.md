@@ -22,6 +22,7 @@ A running local web app Daniel starts with one command and actually trains with:
 - [What can the chess.com API actually give us?](tickets/001-chesscom-api-capabilities.md) — monthly archive endpoint has ~5s cache + ETag 304s, so near-instant sync via adaptive serial conditional polling is officially sanctioned; PGN carries clocks/ECO; no live-game endpoint exists.
 - [Off-the-shelf chess building blocks for a local web app](tickets/002-chess-building-blocks.md) — chessground + chess.js + stockfish.js lite (Skill Level, not UCI_Elo, for weak play) + lichess CC0 openings TSV & puzzle DB; hand-roll nothing.
 - [Which openings should the trainer drill first?](tickets/003-which-openings-first.md) — blend: one-time bulk archive import derives what he plays, gaps filled from a recommended sub-1200 repertoire; both colors day one; lines seed at ~5 moves, extending miss-driven only (needs analysis mode's left-book signal); junk-punishing drills seeded from curated traps then mined from real opponents.
+- [Off-the-shelf data for a beginner repertoire and classic traps](tickets/008-repertoire-traps-data.md) — no openly licensed ready-made dataset exists for either; lichess study export gives auth-free PGN but author-copyrighted (local-use only), so hand-write a small traps.pgn (~12–20 traps + refutations) and a tiny repertoire PGN, auto-named via the CC0 openings TSV and cross-linked to CC0 puzzles via OpeningTags/attackingF2F7.
 
 ## Not yet specified
 
