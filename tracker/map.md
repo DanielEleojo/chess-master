@@ -21,12 +21,13 @@ A running local web app Daniel starts with one command and actually trains with:
 
 - [What can the chess.com API actually give us?](tickets/001-chesscom-api-capabilities.md) — monthly archive endpoint has ~5s cache + ETag 304s, so near-instant sync via adaptive serial conditional polling is officially sanctioned; PGN carries clocks/ECO; no live-game endpoint exists.
 - [Off-the-shelf chess building blocks for a local web app](tickets/002-chess-building-blocks.md) — chessground + chess.js + stockfish.js lite (Skill Level, not UCI_Elo, for weak play) + lichess CC0 openings TSV & puzzle DB; hand-roll nothing.
+- [Which openings should the trainer drill first?](tickets/003-which-openings-first.md) — blend: one-time bulk archive import derives what he plays, gaps filled from a recommended sub-1200 repertoire; both colors day one; lines seed at ~5 moves, extending miss-driven only (needs analysis mode's left-book signal); junk-punishing drills seeded from curated traps then mined from real opponents.
 
 ## Not yet specified
 
 - Tactics puzzle mode — source, difficulty targeting for <1200, spaced repetition. Sharpens after building blocks + stack are decided.
 - Play-vs-engine mode — strength calibration for sub-1200, time controls. After building blocks + stack.
-- Own-game analysis — blunder detection depth, how findings render. After API research, stack, and sync design.
+- Own-game analysis — blunder detection depth, how findings render; must also emit "left book at move N" signals, which drive the opening trainer's miss-driven depth extension. After API research, stack, and sync design.
 - Adaptive coach — what signals feed it, how it recommends practice. Needs several modes to exist first.
 - Progress/data model tying modes together. After stack decision.
 - The v1 build itself — sliced into tasks once the stack and the opening-trainer prototype resolve.
