@@ -1,0 +1,153 @@
+[Event "Repertoire: Italian main line"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 *
+
+[Event "Repertoire: Italian, Two Knights"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 {5...Nxd5 6.Nxf7 is the Fried Liver — see traps.pgn} *
+
+[Event "Repertoire: Italian, vs Philidor setup"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 d6 3. d4 exd4 4. Nxd4 Nf6 5. Nc3 *
+
+[Event "Repertoire: Italian, vs Petrov"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nf6 3. Nxe5 d6 4. Nf3 Nxe4 5. d4 {3...Nxe4?? instead of 3...d6 is the copycat trap — see traps.pgn} *
+
+[Event "Repertoire: vs Scandinavian"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 d5 2. exd5 Qxd5 3. Nc3 Qa5 4. d4 Nf6 5. Nf3 *
+
+[Event "Repertoire: vs Alekhine"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 Nf6 2. e5 Nd5 3. d4 d6 4. Nf3 dxe5 5. Nxe5 *
+
+[Event "Repertoire: vs French, Exchange"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 e6 2. d4 d5 3. exd5 exd5 4. Bd3 Bd6 5. Nf3 *
+
+[Event "Repertoire: vs Sicilian, Open"]
+[System "Italian"]
+[TrainAs "White"]
+[Result "*"]
+
+1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 *
+
+[Event "Repertoire: Caro-Kann, Exchange"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d4 d5 3. exd5 cxd5 4. Bd3 Nc6 5. c3 Nf6 *
+
+[Event "Repertoire: Caro-Kann, Advance"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d4 d5 3. e5 Bf5 {bishop out BEFORE ...e6 — the whole point of the Caro} 4. Nf3 e6 5. Be2 c5 *
+
+[Event "Repertoire: Caro-Kann, Classical"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 {4...Nd7?! invites the smothered-mate trap — see traps.pgn} 5. Ng3 Bg6 *
+
+[Event "Repertoire: Caro-Kann, vs Two Knights"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Nf3 d5 3. Nc3 Bg4 4. h3 Bxf3 5. Qxf3 e6 *
+
+[Event "Repertoire: Caro-Kann, vs 2.Nc3"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Nc3 d5 3. Nf3 Bg4 {same position as the Two Knights line; 3.d4 dxe4 4.Nxe4 Bf5 transposes to the Classical} *
+
+[Event "Repertoire: Caro-Kann, vs 2.Bc4 Hillbilly"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Bc4 d5 3. exd5 cxd5 4. Bb3 Nf6 5. Nc3 Nc6 {see traps.pgn for 3.Bxd5?? and 4.Bb5+} *
+
+[Event "Repertoire: Caro-Kann, vs 2.Qh5 Wayward Queen"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. Qh5 d5 3. exd5 cxd5 4. d4 Nf6 5. Qd1 Nc6 {every queen grab loses her — see traps.pgn} *
+
+[Event "Repertoire: Caro-Kann, vs 2.d3"]
+[System "Caro-Kann"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. e4 c6 2. d3 d5 3. Nd2 e5 4. Ngf3 Bd6 *
+
+[Event "Repertoire: Slav main line"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. c4 d5 3. Nf3 Nf6 4. Nc3 e6 *
+
+[Event "Repertoire: Slav, vs London"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. Bf4 d5 3. e3 Bf5 {mirror the bishop — same idea as the Caro} 4. Nf3 e6 5. Bd3 Bxd3 6. Qxd3 Nf6 *
+
+[Event "Repertoire: Slav, vs 2.Nf3"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. Nf3 d5 3. e3 Bf5 4. Bd3 Bxd3 5. Qxd3 e6 *
+
+[Event "Repertoire: Slav, vs 2.e3"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. e3 d5 3. Bd3 Nf6 4. Nf3 Bg4 5. O-O e6 *
+
+[Event "Repertoire: Slav, vs 2.Nc3"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. Nc3 d5 3. Nf3 Nf6 4. Bf4 Bf5 5. e3 e6 *
+
+[Event "Repertoire: Slav, 2.e4 transposition"]
+[System "Slav"]
+[TrainAs "Black"]
+[Result "*"]
+
+1. d4 c6 2. e4 d5 {transposes straight into the Caro-Kann — follow those lines} *

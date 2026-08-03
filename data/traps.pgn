@@ -1,0 +1,89 @@
+[Event "Trap: Fool's Mate"]
+[Punisher "Black"]
+[Result "0-1"]
+
+1. f3 e5 2. g4 Qh4# 0-1
+
+[Event "Trap: Scholar's Mate, refuted"]
+[Punisher "Black"]
+[Result "*"]
+
+1. e4 e5 2. Bc4 Bc5 3. Qh5 Qe7 {guards f7 — 3...Nf6?? 4.Qxf7# is the mate} 4. Qxe5 Qxe5 {the greedy grab loses the queen: e5 was defended along the e-file} *
+
+[Event "Trap: Wayward Queen Attack, refuted"]
+[Punisher "Black"]
+[Result "*"]
+
+1. e4 e5 2. Qh5 Nc6 {guards e5 — don't panic, develop} 3. Bc4 g6 4. Qf3 Nf6 {blocks the renewed Qxf7# threat; White has only lost time} *
+
+[Event "Trap: Wayward Queen vs Caro-Kann, punished"]
+[Punisher "Black"]
+[Result "*"]
+
+1. e4 c6 2. Qh5 d5 {3.Qxd5?? cxd5 and the c-pawn takes the queen} 3. exd5 cxd5 4. Qxd5 Qxd5 {d8's queen guards d5; if White declines instead, ...Nf6 and ...Nc6 come with a huge lead} *
+
+[Event "Trap: Hillbilly Attack vs Caro-Kann, punished"]
+[Punisher "Black"]
+[Result "*"]
+
+1. e4 c6 2. Bc4 d5 {3.Bxd5?? cxd5 wins a piece; 3.Bb3 dxe4 wins the e-pawn} 3. exd5 cxd5 4. Bb5+ Bd7 5. Bxd7+ Nxd7 {Black owns the center and every White move so far lost time} *
+
+[Event "Trap: Fried Liver Attack"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 Nxd5 {5...Na5! is Black's sound escape} 6. Nxf7 Kxf7 7. Qf3+ Ke6 {forced to defend d5} 8. Nc3 {the king is stuck in the middle; the attack plays itself} *
+
+[Event "Trap: Legal's Mate"]
+[Punisher "White"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6 5. Nxe5 Bxd1 {taking the queen walks into mate; 5...dxe5 6.Qxg4 only loses a pawn} 6. Bxf7+ Ke7 7. Nd5# 1-0
+
+[Event "Trap: Petrov copycat"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nf6 3. Nxe5 Nxe4 {copying is the mistake — 3...d6! first} 4. Qe2 Nf6 {4...d5 5.d3 Qe7 6.dxe4 limits it to a pawn} 5. Nc6+ {discovered check, and the knight forks d8} 5... Qe7 6. Nxe7 Bxe7 {queen for a knight} *
+
+[Event "Trap: Stafford Gambit, refuted"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nf6 3. Nxe5 Nc6 4. Nxc6 dxc6 5. d3 {the move that defuses everything; natural moves lose: 5.Nc3? Bc5 threatens ...Ng4, and after 5.d3 Bc5 6.Bg5?? Nxe4! 7.Bxd8 Bxf2+ 8.Ke2 Bg4# is the famous mate} 5... Bc5 6. Be2 {calm development; every ...Ng4 and ...Bxf2 trick now fizzles} *
+
+[Event "Trap: Blackburne Shilling Gambit, refuted"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 {baiting the e5 pawn: 4.Nxe5?? Qg5! 5.Nxf7 Qxg2 6.Rf1 Qxe4+ 7.Be2 Nf3# — the whole point of Black's junk} 4. Nxd4 exd4 5. O-O {simply up a tempo with the better center} *
+
+[Event "Trap: Damiano Defense, punished"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 f6 {the worst defense of e5} 3. Nxe5 fxe5 {3...Qe7! declines and limits the damage} 4. Qh5+ Ke7 {4...g6 5.Qxe5+ forks king and rook} 5. Qxe5+ Kf7 6. Bc4+ d5 7. Bxd5+ Kg6 8. h4 {h5+ is coming; the king hunt wins by force} *
+
+[Event "Trap: Early queen 2...Qf6, punished"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Qf6 {out too early — develop with tempo against her} 3. Nc3 c6 {stopping Nd5; on most other moves 4.Nd5! hits queen and c7} 4. d4 exd4 5. e5 Qe7 6. Qxd4 {monster center and a huge lead in development} *
+
+[Event "Trap: Latvian Gambit, refuted"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 f5 {a Scholar's-era gambit — just take} 3. Nxe5 Qf6 4. d4 d6 5. Nc4 fxe4 6. Nc3 {pieces flow to the weakened king; Black's f-file airiness never goes away} *
+
+[Event "Trap: Elephant Gambit, refuted"]
+[Punisher "White"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 d5 {3...Qxd5 4.Nc3! gains the same tempo as against the Scandinavian} 3. exd5 e4 4. Qe2 {hits the stray pawn; 4...Nf6 5.d3 keeps it too} 4... Qxd5 5. Nc3 {double attack on queen and pawn} 5... Qe6 6. Nxe4 {a clean pawn up — 6...Qxe4?? 7.Qxe4+ wins the queen on the pinned file} *
+
+[Event "Trap: Caro-Kann smothered mate"]
+[Punisher "White"]
+[Result "1-0"]
+
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nd7 {our repertoire's 4...Bf5 sidesteps this entirely} 5. Qe2 Ngf6 {the losing move — 5...Ndf6 or 5...e6 and Black is fine} 6. Nd6# {exd6 is illegal: the e7 pawn is pinned by Qe2} 1-0
