@@ -6,6 +6,7 @@ import { lichessCards, loadPuzzles, ownCards, type PCard } from './lib/puzzles'
 import { milestone, ratingHistory, MILESTONES, type Milestone } from './lib/recommend'
 import { startSync, setUser, type Game } from './lib/sync'
 import { resolveChessUsername } from './lib/account'
+import { pushOfferable, subscribeToPush } from './lib/push'
 import { CoachCard } from './components/CoachCard'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
@@ -98,7 +99,10 @@ export default function App() {
   const [rung, setRung] = useState(0) // sparring ladder, see Spar.tsx — localStorage
   const [ms, setMs] = useState<Milestone | null>(null) // real rating off the archives
   const [chessUser, setChessUser] = useState('') // this account's chess.com username
+  const [pushable, setPushable] = useState(false) // show the "notify me" link (026)
   const toastId = useRef(0)
+
+  useEffect(() => setPushable(pushOfferable()), [])
 
   // Rating ladder from the synced archives — read once at boot, shown in the
   // home header and reused by the coach's pitch, so neither refetches it.
@@ -324,6 +328,14 @@ export default function App() {
         <a className="tiny" href="?selftest=1">
           selftest
         </a>
+        {pushable && (
+          <button
+            className="tiny"
+            onClick={() => void subscribeToPush().then((ok) => ok && setPushable(false))}
+          >
+            Notify me if I go quiet →
+          </button>
+        )}
       </div>
     </div>,
   )

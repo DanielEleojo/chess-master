@@ -11,5 +11,12 @@
   },
   "kv_namespaces": [{ "binding": "DATA", "id": "2357d8470c904e63b6c1dbed8da73629" }],
   "ai": { "binding": "AI" },
-  "routes": [{ "pattern": "chess.meetdanielbaba.com", "custom_domain": true }]
+  "routes": [{ "pattern": "chess.meetdanielbaba.com", "custom_domain": true }],
+  // Ticket 026: VAPID_PRIVATE_JWK is a secret (wrangler secret put / .dev.vars),
+  // not a var — it's the key that signs push auth, unlike the public half here.
+  "vars": {
+    "VAPID_SUBJECT": "mailto:danielbaba029@gmail.com",
+    "VAPID_PUBLIC_KEY": "BPjBKFvRnW4RE3Gyf-0HnQCJDn82j9hOKUNN4r7GDMKI6RCF_uNyI5Om0yl_IDFYaB0Os6ADAkRTW4-kto58ULk"
+  },
+  "triggers": { "crons": ["0 0 * * *"] }
 }

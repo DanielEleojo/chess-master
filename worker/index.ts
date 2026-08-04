@@ -10,6 +10,8 @@
 // with, so each login only ever sees its own data. No header (local dev,
 // Access not yet configured) falls back to one shared dev account.
 
+import { sendPush, type PushSubscription } from './push'
+
 const NAME_RE = /^(archives\/)?[\w-]+$/
 
 // Coach voice (ticket 017 / ADR 0001) moved here from a direct browser->local
@@ -70,6 +72,54 @@ async function dataRoute(uid: string, name: string, request: Request, env: Env):
   return new Response(null, { status: 405 })
 }
 
+// Ticket 026: same signal as recommend.ts's INACTIVITY_DAYS rung, duplicated
+// rather than imported — worker/ and src/ are separate bundles (COACH_MODEL
+// above mirrors src/lib/coach.ts's MODEL the same way).
+const PUSH_INACTIVITY_DAYS = 5
+
+async function pushAccount(uid: string, env: Env): Promise<void> {
+  const sub = await env.DATA.get<PushSubscription>(`${uid}/push-subscription`, 'json')
+  if (!sub) return
+  const history = await env.DATA.get<{ sessions?: { at: string }[] }>(`${uid}/drill-history`, 'json')
+  const last = history?.sessions?.at(-1)
+  if (!last) return
+  const days = Math.floor((Date.now() - new Date(last.at).getTime()) / 86400000)
+  if (days < PUSH_INACTIVITY_DAYS) return
+
+  const state = await env.DATA.get<{ lastPushAt?: string }>(`${uid}/push-state`, 'json')
+  if (state?.lastPushAt && state.lastPushAt > last.at) return // already pushed for this quiet streak
+
+  const res = await sendPush(
+    sub,
+    `${days} days since your last session — your coach has a pick ready.`,
+    { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateJwk: JSON.parse(env.VAPID_PRIVATE_JWK) },
+  )
+  if (res.ok) {
+    await env.DATA.put(`${uid}/push-state`, JSON.stringify({ lastPushAt: new Date().toISOString() }))
+  } else if (res.status === 404 || res.status === 410) {
+    await env.DATA.delete(`${uid}/push-subscription`) // gone or unsubscribed at the browser end
+  }
+}
+
+// Every route above already scopes data by a uid prefix (Cloudflare Access
+// email); the cron just has to discover which prefixes exist. One list() call
+// over the whole namespace is fine at this account count — revisit with a
+// maintained account-index key if that ever stops being true.
+async function listAccounts(env: Env): Promise<string[]> {
+  const uids = new Set<string>()
+  let cursor: string | undefined
+  for (;;) {
+    const page = await env.DATA.list({ cursor })
+    for (const k of page.keys) {
+      const slash = k.name.indexOf('/')
+      if (slash > 0) uids.add(k.name.slice(0, slash))
+    }
+    if (page.list_complete) break
+    cursor = page.cursor
+  }
+  return [...uids]
+}
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url)
@@ -98,5 +148,13 @@ export default {
     }
 
     return env.ASSETS.fetch(request)
+  },
+
+  // Daily Cron Trigger (ticket 026): fires once per account the first day it
+  // crosses PUSH_INACTIVITY_DAYS quiet, never repeats until a new session resets it.
+  async scheduled(_event, env) {
+    for (const uid of await listAccounts(env)) {
+      await pushAccount(uid, env).catch(() => {})
+    }
   },
 } satisfies ExportedHandler<Env>

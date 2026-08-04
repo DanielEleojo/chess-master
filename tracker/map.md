@@ -53,9 +53,10 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Coach gets an edge — tone rewrite + inactivity nudge](tickets/024-coach-gets-an-edge.md) — `coach.ts` drops "friendly" for a rigorous baseline, harsher for real blunders (`severity === 'blunder'`) and repeat weak-drill picks (never a first miss); `recommend.ts` gains a top rung for ≥5 days quiet, outranking even unseen games. Verified live on home; Selftest/Analysis click-through blocked by an unrelated pre-existing crash (028).
 - [Puzzles ratchet difficulty like Spar](tickets/025-puzzles-difficulty-ratchet.md) — `build-puzzles.py`'s band widened to (600, 2000) and rebuilt (720 puzzles, one deck); a `FLOORS` ladder (600/850/1100/1350/1600) mirrors Spar's rung shape — 2 strong deals (≥80% hit rate) at a floor retires it for good, `cm.puzzleFloor`/`cm.puzzleStrong` in localStorage, badge in Tactics' `ModeHead`. No dynamic ceiling — the band's top already bounds it.
 
+- [Push notifications for the coach](tickets/026-coach-push-notifications.md) — a plain-fact doorbell, not the LLM pitch: reuses 024's 5-day inactivity signal exactly, fires once per crossing, permission asked via a low-key Home link (gated on unasked, no re-ask on decline), single subscription per account overwritten on resubscribe, daily Cron Trigger. [Built](tickets/029-build-coach-push-notifications.md) with hand-rolled RFC 8291/8292 crypto (`worker/push.ts`) verified byte-for-byte against the RFC's own test vectors — the available zero-dep Workers push packages all implement the legacy pre-standard scheme browsers are dropping. Verified live inside the real Workers runtime via `wrangler dev --test-scheduled`; the browser permission-grant leg still needs one real click from Daniel since the dev profile has notifications pre-denied.
+
 ## Not yet specified
 
-- [026](tickets/026-coach-push-notifications.md) — push notifications design. Open, unassigned, unblocked, lower priority.
 - [027](tickets/027-coach-followup-qa.md) — fact-grounded coach Q&A design. Open, unassigned, unblocked, lower priority.
 - [028](tickets/028-selftest-crash-on-load.md) — `?selftest=1` blanks the app; renders before data loads, no error boundary. Discovered verifying 024, unrelated to it. Open, unassigned, unblocked.
 
