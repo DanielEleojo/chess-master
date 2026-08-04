@@ -30,7 +30,9 @@ const mmss = (ms: number) =>
   Math.floor(ms / 60000) + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0')
 
 export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
-  const [rung, setRung] = useState(1)
+  // ponytail: localStorage, not data/*.json — the ladder rung is one number of UI
+  // state, and the training record it might feed is still fog on the map.
+  const [rung, setRung] = useState(() => +(localStorage.getItem('cm.rung') ?? 1) || 0)
   const [pick, setPick] = useState<'w' | 'b' | 'r'>('w')
   const [lineIdx, setLineIdx] = useState(-1)
   const [playing, setPlaying] = useState(false)
@@ -70,14 +72,30 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     const s = st.current
     const c = s.chess
     if (!c.isGameOver()) return false
+    const won = c.isCheckmate() && c.turn() !== s.my
     s.over = c.isCheckmate()
-      ? c.turn() === s.my
-        ? 'Checkmate — it got you.'
-        : 'Checkmate. You won.'
+      ? won
+        ? 'Checkmate. You won.'
+        : 'Checkmate — it got you.'
       : c.isStalemate()
         ? 'Stalemate — draw.'
         : 'Draw.'
+    if (won) promote()
     return true
+  }
+
+  // Round 3: a beaten rung is retired for good. Winning is the only thing that
+  // moves the ladder, and it only ever moves up — so the opponent stays just
+  // above him and the sparring never turns into farming a rung he's outgrown.
+  function promote() {
+    const s = st.current
+    const next = Math.min(RUNGS.length - 1, rungRef.current + 1)
+    if (next === rungRef.current) {
+      s.over += ' Top rung — nothing above this one.'
+      return
+    }
+    s.over += ` ${RUNGS[rungRef.current].name} retired — you're on ${RUNGS[next].name} now.`
+    setRung(next)
   }
 
   async function engineMove(id: number) {
@@ -133,7 +151,9 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     s.clock = { w: 0, b: 0 }
     s.since = Date.now()
     cg.current!.set({ orientation: s.my === 'w' ? 'white' : 'black' })
-    ;(window as any).cmSpar = () => ({ fen: s.chess.fen(), over: s.over, thinking: s.thinking }) // dev hook
+    // dev hooks — cmPromote drives the ratchet without having to beat the engine
+    ;(window as any).cmSpar = () => ({ fen: s.chess.fen(), over: s.over, thinking: s.thinking })
+    ;(window as any).cmPromote = () => (promote(), repaint())
     repaint()
     if (s.chess.turn() !== s.my) void engineMove(s.id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,6 +164,8 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     const t = setInterval(() => force((n) => n + 1), 1000)
     return () => clearInterval(t)
   }, [playing])
+
+  useEffect(() => localStorage.setItem('cm.rung', String(rung)), [rung])
 
   useEffect(() => () => engRef.current?.quit(), [])
 
@@ -160,14 +182,19 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
             {RUNGS.map((r, i) => (
               <button
                 key={r.name}
+                disabled={i < rung}
                 style={{ display: 'block', width: '100%', textAlign: 'left', marginTop: 6 }}
                 onClick={() => setRung(i)}
               >
-                {i === rung ? '● ' : '○ '}
-                <b>{r.name}</b> — {r.blurb}{' '}
+                {i === rung ? '● ' : i < rung ? '✓ ' : '○ '}
+                <b>{r.name}</b> — {i < rung ? 'beaten — retired' : r.blurb}{' '}
                 <span className="tiny dim">({knobs(r)})</span>
               </button>
             ))}
+            <div className="tiny dim" style={{ marginTop: 8 }}>
+              beat a rung and it's gone for good — the ladder only goes up. Jump ahead whenever you
+              like; there's no way back down.
+            </div>
           </div>
           <div className="panel" style={{ marginTop: 12 }}>
             <b>Start from</b>
@@ -199,8 +226,9 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
             )}
           </div>
           <div className="tiny dim" style={{ marginTop: 12 }}>
-            The bottom rungs now play sloppily on purpose — they see the good move and
-            pick a worse one. Say if the floor is still too strong, or already too silly.
+            The bottom rungs play sloppily on purpose — they see the good move and pick a worse
+            one. That's what makes a win possible; the ratchet is what stops it becoming a habit.
+            Say if it climbs too fast, or not fast enough.
           </div>
           <div style={{ marginTop: 14 }}>
             <button onClick={() => setPlaying(true)}>Play</button> <button onClick={onExit}>Home</button>
@@ -237,13 +265,13 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
             onChange={(e) => setRung(+e.target.value)}
           >
             {RUNGS.map((r, i) => (
-              <option key={r.name} value={i}>
+              <option key={r.name} value={i} disabled={i < rung}>
                 {r.name} — {knobs(r)}
               </option>
             ))}
           </select>
           <div className="tiny dim" style={{ marginTop: 6 }}>
-            switchable mid-game on purpose — find where it stops being fun
+            up only, mid-game included — win and this rung retires itself
           </div>
         </div>
         <div className="panel">

@@ -35,4 +35,17 @@ Starving the search does not make Stockfish weak — measured, `nodes 1` still d
 - Effect, measured live: the floor's reply to 1.e4 now varies run to run (a5 / e6 / g6 / d5 / Nf6 across eight games) where the old ladder was near-deterministic; the top rung stays deterministic.
 - **Selftest** (`?selftest=1`) now covers the pure softmax: temp 0 never strays, the floor plays a −900cp move ~12% of the time, and Improver hangs it less than half as often. All green.
 
-Awaiting Daniel's round-2 reaction: is the floor beatable now (and is it *too* silly), how many rungs survive and what they're called, clock or no clock, and whether spar-from-a-line is worth keeping.
+## Round 2 reaction (Daniel, 2026-08-04): "I still want it to be hard"
+
+Verbatim: *"i still want it to be hard, the goal is to challenge my self not get comfortable, it should feel almost like im not making any progress."*
+
+Read against his round-1 ask ("the floor still beats me, add the randomness"), these only look contradictory. He wants a rung to be **winnable** but not **farmable** — so the randomness stays and the ladder stops sitting still:
+
+- **Beat a rung and it retires.** A win promotes him one rung, permanently. Losing never demotes; nothing resets. The engine therefore lives just above him forever, which is exactly what "almost like I'm not making progress" feels like from the inside — real progress, absorbed by a stronger opponent instead of paid out as easier wins.
+- **The picker only goes up.** Retired rungs render `✓ beaten — retired` and are disabled in both the setup list and the mid-game selector. Jumping ahead is still allowed — the only thing removed is the way back down.
+- **Top rung is a wall on purpose**: at Club player a win prints *"Top rung — nothing above this one."* If he hits that wall, that's the signal to add rungs above it, not a bug.
+- **ponytail**: the rung is `localStorage['cm.rung']`, not `data/*.json`. It's one number of UI state, and whether spar results belong in the training record is still fog on the map — this doesn't pre-empt that decision.
+
+Verified live: promotion advances the badge and both pickers mid-game, disables what's beaten, survives a reload, and stops cleanly at the top. `tsc` clean, selftest green, no console errors. Honest caveat — the ratchet was driven through a `window.cmPromote()` dev hook (same idiom as `cmMove`/`cmSpar`) rather than by actually mating the engine; scholar's mate lost 10/10 attempts against the floor, which is its own data point about how strong "Careless" still is. The `won → promote()` trigger is a single call site in `finished()`.
+
+Still open for his next sitting: does one win per rung climb too fast (best-of-three? a win *and* a clean game?), is the floor finally beatable in real play, clock or no clock, and whether spar-from-a-line earns its keep.
