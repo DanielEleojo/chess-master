@@ -10,6 +10,10 @@ export interface Score {
 
 export interface Engine {
   evalFen(fen: string, ms: number): Promise<Score>
+  // Sparring (014): deliberately weak play. Skill Level already randomises among
+  // Stockfish's own candidate moves, so the node cap is the real strength dial.
+  // ponytail: the option is sticky on the worker — sparring gets its own engine.
+  playFen(fen: string, skill: number, nodes: number): Promise<string | null>
   quit(): void
 }
 
@@ -53,6 +57,18 @@ export function startEngine(): Engine {
         }
         const bm = lines[lines.length - 1].split(' ')[1]
         return { cp, best: bm && bm !== '(none)' ? bm : null, pv }
+      })
+      queue = job.catch(() => {})
+      return job
+    },
+    playFen(fen, skill, nodes) {
+      const job = queue.then(async () => {
+        const done = until((l) => l.startsWith('bestmove'))
+        w.postMessage('setoption name Skill Level value ' + skill)
+        w.postMessage('position fen ' + fen)
+        w.postMessage('go nodes ' + nodes)
+        const bm = (await done).pop()!.split(' ')[1]
+        return bm && bm !== '(none)' ? bm : null
       })
       queue = job.catch(() => {})
       return job

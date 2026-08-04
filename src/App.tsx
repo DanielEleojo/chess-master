@@ -9,9 +9,10 @@ import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
 import { Puzzles } from './modes/Puzzles'
 import { Analysis } from './modes/Analysis'
+import { Spar } from './modes/Spar'
 import { Selftest } from './modes/Selftest'
 
-type Mode = 'home' | 'lines' | 'traps' | 'puzzles' | 'analysis' | 'selftest'
+type Mode = 'home' | 'lines' | 'traps' | 'puzzles' | 'analysis' | 'spar' | 'selftest'
 type Toast = { id: number; text: string }
 
 // "last synced Xs ago" — home screen only, no spinners (006)
@@ -137,6 +138,7 @@ export default function App() {
     )
   if (mode === 'analysis')
     return wrap(<Analysis key={dealNo} lines={lines} onExit={() => setMode('home')} />)
+  if (mode === 'spar') return wrap(<Spar key={dealNo} lines={lines} onExit={() => setMode('home')} />)
   if (mode === 'selftest') return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} />)
 
   const lineStats = Object.values(h.lines)
@@ -195,6 +197,14 @@ export default function App() {
           </h2>
           <div className="sub">
             engine-checks your real games · blunders + where you left book
+          </div>
+        </button>
+        <button className="modecard" onClick={() => go('spar')}>
+          <h2>
+            Sparring <span className="badge">rough</span>
+          </h2>
+          <div className="sub">
+            play a weakened Stockfish · fresh game or on from a repertoire line
           </div>
         </button>
       </div>
