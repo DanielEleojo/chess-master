@@ -15,6 +15,7 @@ A running local web app Daniel starts with one command and actually trains with:
 - Skills per session: /grilling + /domain-modeling for decisions, /prototype for UX questions, /research subagents for AFK facts.
 - Tracker: local markdown. Tickets are files in `tracker/tickets/`, frontmatter holds `type`, `status`, `assignee`, `blocked-by`. Claim = set `assignee`. Frontier = open, unassigned, all `blocked-by` tickets closed.
 - Domain glossary: `CONTEXT.md` (coaching terms are binding); decisions in `docs/adr/`. Local LLM: Ollama at `localhost:11434`, `qwen2.5:7b-instruct` — the coach voice; it phrases, never decides (ADR 0001).
+- Visual direction is the **scoresheet** (021), and it's binding on new UI: colours are taken off a tournament board, `--gold`/brass means *earned* and `--red`/flag means *wrong* (never decoration), numbers are set in `--mono` with tabular figures, and any surface with a board uses the `.play` shell — board left, feedback in the rail beside it. No webfonts: the app runs offline.
 
 ## Decisions so far
 
@@ -43,6 +44,8 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Build the line extension mechanism](tickets/020-build-line-extension.md) — 019 runs live: `bookWalk` now carries the opponent's break move + outlived flag (ANALYSIS_V 4), `extend.ts`'s exact-break trigger feeds a new coach rung below re-drill, the card proposes numbered plies with one-click accept (branch appends / tail rewrites `repertoire.pgn` via a new PGN PUT route, then parks the break so it can't re-propose) and dismiss sleeps until a new game re-hits; tail grace consumes a stored pre-extension length once.
 
 - [Engine sparring — a beatable Stockfish for a sub-1200](tickets/014-engine-sparring-prototype.md) — sparring ships as a real mode: five rungs weakened by MultiPV softmax (`temp` = the centipawn loss a move can carry), Skill Level deleted as inert, two wins retires a rung permanently and the ladder never goes back down (`localStorage['cm.rung']`), start fresh or from any repertoire line, no clock; the remaining calibration is exported knobs, not open questions. Closed with a whole-app design pass — shared `ModeHead` back bar replacing the five stray Home buttons, home as an even grid with real stat lines, board and highlights retinted to the one gold accent.
+
+- [Give the app a visual identity — the scoresheet](tickets/021-visual-identity-scoresheet.md) — 014's pass made the modes consistently *generic* (default dark + one gold accent), so the app took a direction off its own subject: the palette comes from a real roll-up tournament board (buff squares, vinyl green, the clock's red flag), brass now means **earned** and red means **wrong** with the `?`/`??` glyphs carrying severity, home leads with the milestone ladder drawn to scale over ruled ledger rows, the game list is a crosstable (`1`/`0`/`½`), and every board mode shares one `.play` shell with feedback *beside* the board instead of 500px under it. Surfaced five real bugs — chiefly a pixel-sized `Board` that broke mobile on every mode.
 
 ## Not yet specified
 
