@@ -10,6 +10,7 @@ export interface Card {
   line: Line
   k: number // ply index of the punishing move to find
   key: string
+  retry?: boolean // requeued copy of a missed card — doesn't touch history
 }
 
 // One card per commented punisher move — the comment is the "why" shown on the
@@ -50,6 +51,7 @@ export function TrapCards({
   const [, force] = useState(0) // dots repaint after result mutation
   const [prompt, setPrompt] = useState<{ text: string; cls: string }>({ text: 'Your move.', cls: '' })
   const [coach, setCoach] = useState('')
+  const [awaitNext, setAwaitNext] = useState(false) // teaching moment on screen — no timer, user advances
 
   const cg = useRef<Api | null>(null)
   const wrap = useRef<HTMLDivElement>(null)
@@ -70,6 +72,30 @@ export function TrapCards({
     setCi(idx)
     setPrompt({ text: 'Your move.', cls: '' })
     setCoach('')
+    setAwaitNext(false)
+  }
+
+  // missed card returns later in the same deal (005: misses requeue) until clean
+  function next(idx: number) {
+    const c = cards[idx]
+    if (c && c.result === 'bad') cards.push({ line: c.line, k: c.k, key: c.key, retry: true, result: null })
+    show(idx + 1)
+  }
+
+  // after a reveal: the rest of the trap plays itself out so the why is visible
+  function step() {
+    const d = st.current.drill
+    if (!d) return
+    if (d.done()) {
+      setPrompt({ text: 'That’s the trap. It comes back this deal — get it clean.', cls: 'bad' })
+      setAwaitNext(true)
+      return
+    }
+    const e = d.expected()
+    if (e.color === d.uc) d.tryMove(e.from, e.to)
+    else d.autoMoves()
+    syncBoard(cg.current!, d.chess, d.uc, false, [e.from, e.to])
+    later(700, step)
   }
 
   function onMove(from: string, to: string) {
@@ -83,14 +109,21 @@ export function TrapCards({
       c.result ??= 'good'
       cg.current!.setAutoShapes([])
       syncBoard(cg.current!, s.drill.chess, s.drill.uc, false, [r.got!.from, r.got!.to])
-      setPrompt({
-        text: first ? `✓ ${r.exp.san}` : `✓ ${r.exp.san} — got it after the reveal`,
-        cls: c.result,
-      })
-      if (first && cmt) setCoach(cmt)
       beep(true)
       force((n) => n + 1)
-      later(cmt && first ? 1700 : 900, () => show(ci + 1))
+      if (!first) {
+        // recovered after the reveal — watch the punishment land, then Next
+        setPrompt({ text: `✓ ${r.exp.san} — watch why it wins`, cls: 'bad' })
+        later(700, step)
+      } else if (cmt) {
+        // teaching text on screen: no timer, read at your own pace
+        setPrompt({ text: `✓ ${r.exp.san}`, cls: c.result })
+        setCoach(cmt)
+        setAwaitNext(true)
+      } else {
+        setPrompt({ text: `✓ ${r.exp.san}`, cls: c.result })
+        later(900, () => next(ci))
+      }
     } else {
       c.result ??= 'bad'
       setPrompt({
@@ -108,12 +141,13 @@ export function TrapCards({
 
   function finish() {
     st.current.drill = null // the last card's drill may not be done() mid-line; stop taking moves
-    for (const c of cards) bump(history.traps, c.key, c.result === 'bad')
+    const originals = cards.filter((c) => !c.retry)
+    for (const c of originals) bump(history.traps, c.key, c.result === 'bad')
     history.sessions.push({
       mode: 'traps',
       at: new Date().toISOString(),
-      cards: cards.length,
-      good: cards.filter((c) => c.result === 'good').length,
+      cards: originals.length,
+      good: originals.filter((c) => c.result === 'good').length,
     })
     saveHistory(history)
     setCi(cards.length)
@@ -128,13 +162,15 @@ export function TrapCards({
 
   const done = ci >= cards.length
   const c = cards[ci]
-  const good = cards.filter((x) => x.result === 'good').length
+  const originals = cards.filter((x) => !x.retry)
+  const good = originals.filter((x) => x.result === 'good').length
   return (
     <div className="cards">
       <div>
         <h2>Trap cards</h2>
         <div className="sub">
-          the junk you actually face · one punishing move each · miss = see why, then play it
+          the junk you actually face · one punishing move each · miss = see why, watch it play out
+          — it returns this deal
         </div>
       </div>
       <div className="dots">
@@ -154,18 +190,19 @@ export function TrapCards({
           </div>
           <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
           <div className="coach">{coach}</div>
+          {awaitNext && <button onClick={() => next(ci)}>Next →</button>}
         </div>
       )}
       {done && (
         <div className="card cardface">
           <h2>
-            {good}/{cards.length}
+            {good}/{originals.length}
           </h2>
           <div className="sub">
-            {good === cards.length ? 'clean sweep — they walk into these, you collect' : 'missed traps come back first next deal'}
+            {good === originals.length ? 'clean sweep — they walk into these, you collect' : 'missed traps come back first next deal'}
           </div>
           <ul className="misslist">
-            {cards.map((x, i) => (
+            {originals.map((x, i) => (
               <li key={i}>
                 {x.result === 'good' ? '✓' : '✗'} {x.line.name} — move {Math.floor(x.k / 2) + 1} as{' '}
                 {x.line.trainAs}

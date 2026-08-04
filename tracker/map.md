@@ -14,6 +14,7 @@ A running local web app Daniel starts with one command and actually trains with:
 - Ponytail mode is active: laziest working solution, off-the-shelf first (chess.js, Stockfish WASM, existing puzzle/opening data — never hand-roll chess logic).
 - Skills per session: /grilling + /domain-modeling for decisions, /prototype for UX questions, /research subagents for AFK facts.
 - Tracker: local markdown. Tickets are files in `tracker/tickets/`, frontmatter holds `type`, `status`, `assignee`, `blocked-by`. Claim = set `assignee`. Frontier = open, unassigned, all `blocked-by` tickets closed.
+- Domain glossary: `CONTEXT.md` (coaching terms are binding); decisions in `docs/adr/`. Local LLM: Ollama at `localhost:11434`, `qwen2.5:7b-instruct` — the coach voice; it phrases, never decides (ADR 0001).
 
 ## Decisions so far
 
@@ -33,11 +34,12 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Do never-before-drilled lines get a watch-first intro pass?](tickets/012-watch-first-intro-pass.md) — no: cold-start stands (misses teach), softened only by a stats-side grace — a line's first-ever miss isn't recorded in drill history (teaching/requeue unchanged), while a first-attempt hit counts.
 - [How does "instant" game sync work?](tickets/006-instant-game-sync-design.md) — tab visibility drives cadence (10s visible / 60s hidden / 5s burst ~3 min after an arrival), no presence lookups or unofficial endpoints; arrival = persist + non-blocking toast + unseen flag for future analysis, never interrupting a drill; honest promise is ~10–15s while visible (5s server cache is the floor) with only a tiny "last synced" line as UI.
 - [Build the live sync loop](tickets/015-build-live-sync.md) — 006's design now runs in the shell (`src/lib/sync.ts` + `archives/` prefix on the 004 middleware): month-file uuid-diff, corner toasts, unseen uuids in `data/sync-state.json`, "last synced" line; verified live when a real bullet game arrived mid-session and toasted within one poll.
+- [Own-game analysis — blunders, rendering, left-book signal](tickets/016-own-game-analysis.md) — analysis mode shipped: stockfish walks any game at 300ms/position, flags his swings (thresholds as knobs), records the 013-ready blunder shape and the 003 left-book signal in `data/analysis.json`, clears unseen flags; Daniel's reactions hardened depth, pacing, and per-move why-comments, and his "explain why my move breaks" rejection of bare PVs spawned the coach effort (017/018, CONTEXT.md, ADR 0001).
 
 ## Not yet specified
 
-- Adaptive coach — what signals feed it, how it recommends practice. Needs several modes to exist first.
-- Progress/data model tying modes together — `data/drill-history.json` (011) and `data/sync-state.json` unseen-uuids (015) now exist; how puzzle, sparring, and analysis results join them emerges as those modes get built (016 consumes the unseen flags).
+- Progress/data model tying modes together — `data/drill-history.json` (011), `data/sync-state.json` (015), `data/analysis.json` (016) now exist; how puzzle (013) and sparring (014) results join them as coach signals (018's ladder) emerges as those modes get built.
+- Miss-driven line extension — 003 wanted lines to deepen where real games leave book; the signal now exists (016's book departures). How extension actually works (auto-append plies? propose to Daniel?) sharpens once 018 shows which lines he keeps leaving.
 
 ## Out of scope
 

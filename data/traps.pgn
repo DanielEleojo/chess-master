@@ -2,7 +2,7 @@
 [Punisher "Black"]
 [Result "0-1"]
 
-1. f3 e5 2. g4 Qh4# 0-1
+1. f3 e5 2. g4 Qh4# {f3 and g4 tore open the e1–h4 diagonal — nothing can block or take} 0-1
 
 [Event "Trap: Scholar's Mate, refuted"]
 [Punisher "Black"]
@@ -38,7 +38,7 @@
 [Punisher "White"]
 [Result "1-0"]
 
-1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6 5. Nxe5 Bxd1 {taking the queen walks into mate; 5...dxe5 6.Qxg4 only loses a pawn} 6. Bxf7+ Ke7 7. Nd5# 1-0
+1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6 5. Nxe5 Bxd1 {taking the queen walks into mate; 5...dxe5 6.Qxg4 only loses a pawn} 6. Bxf7+ Ke7 7. Nd5# {Legal's mate — two knights and the f7 bishop weave the net around the stranded king} 1-0
 
 [Event "Trap: Petrov copycat"]
 [Punisher "White"]

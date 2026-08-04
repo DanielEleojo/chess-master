@@ -271,6 +271,88 @@ pre {
   max-width: 680px;
 }
 
+/* Game analysis (016) */
+.analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.badge.gold {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.gamelist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 68vh;
+  overflow-y: auto;
+}
+.gamerow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+}
+.gamerow .when {
+  color: var(--dim);
+  font-size: 12px;
+  min-width: 78px;
+}
+.gamerow .desc {
+  flex: 1;
+}
+.analview {
+  display: grid;
+  grid-template-columns: minmax(0, 430px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.movelist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.mv {
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 4px;
+}
+.mv:hover {
+  background: #2c2925;
+}
+.mv.cur {
+  background: #2c2925;
+  outline: 1px solid var(--gold);
+}
+.mv.blunder {
+  color: var(--red);
+  font-weight: 700;
+}
+.mv.mistake {
+  color: var(--gold);
+}
+.progress {
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.progress > div {
+  height: 100%;
+  background: var(--gold);
+}
+.bl {
+  cursor: pointer;
+}
+.bl:hover {
+  text-decoration: underline;
+}
+
 /* Sync toasts (015) — non-blocking corner stack, click to dismiss */
 .toasts {
   position: fixed;

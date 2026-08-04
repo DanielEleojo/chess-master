@@ -13,6 +13,15 @@ function dataApi(): Plugin {
     configureServer(server) {
       server.middlewares.use('/api/data', (req, res) => {
         const name = (req.url ?? '').split('?')[0].slice(1)
+        if (name === 'archives' && req.method === 'GET') {
+          // month listing for the analysis mode (016)
+          const months = fs
+            .readdirSync(path.join(DATA, 'archives'))
+            .flatMap((f) => (f.endsWith('.json') ? [f.slice(0, -5)] : []))
+            .sort()
+          res.setHeader('Content-Type', 'application/json')
+          return res.end(JSON.stringify(months))
+        }
         if (!/^(archives\/)?[\w-]+$/.test(name)) {
           res.statusCode = 400
           return res.end('bad name')

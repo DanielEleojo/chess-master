@@ -1,5 +1,53 @@
 {
  "lines": {},
- "traps": {},
- "sessions": []
+ "traps": {
+  "Stafford Gambit, refuted#10": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Petrov copycat#8": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Stafford Gambit, refuted#8": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Wayward Queen Attack, refuted#3": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Blackburne Shilling Gambit, refuted#8": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Scholar's Mate, refuted#7": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Latvian Gambit, refuted#10": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Elephant Gambit, refuted#8": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Elephant Gambit, refuted#10": {
+   "seen": 1,
+   "missed": 0
+  },
+  "Wayward Queen vs Caro-Kann, punished#3": {
+   "seen": 1,
+   "missed": 0
+  }
+ },
+ "sessions": [
+  {
+   "mode": "traps",
+   "at": "2026-08-03T23:15:10.026Z",
+   "cards": 10,
+   "good": 2
+  }
+ ]
 }

@@ -3,151 +3,151 @@
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 *
+1. e4 {take the center and open the bishop's diagonal} e5 2. Nf3 {develop with a threat — e5 must be defended} Nc6 3. Bc4 {the Italian bishop: aimed at f7, the weakest square} Bc5 4. c3 {build the pawn punch — d4 comes next with support} Nf6 5. d4 {strike the center now that c3 backs it up} exd4 6. cxd4 {recapture toward the center — the pawn pair takes over} *
 
 [Event "Repertoire: Italian, Two Knights"]
 [System "Italian"]
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 {5...Nxd5 6.Nxf7 is the Fried Liver — see traps.pgn} *
+1. e4 {take the center and open the bishop's diagonal} e5 2. Nf3 {develop with a threat — e5 must be defended} Nc6 3. Bc4 {the Italian bishop: aimed at f7, the weakest square} Nf6 4. Ng5 {double attack on f7 — only ...d5 holds it together} d5 5. exd5 {5...Nxd5 6.Nxf7 is the Fried Liver — see traps.pgn} *
 
 [Event "Repertoire: Italian, vs Philidor setup"]
 [System "Italian"]
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 e5 2. Nf3 d6 3. d4 exd4 4. Nxd4 Nf6 5. Nc3 *
+1. e4 {take the center and open the bishop's diagonal} e5 2. Nf3 {develop with a threat — e5 must be defended} d6 3. d4 {d6 is passive — open the center at once} exd4 4. Nxd4 {recapture and centralize the knight} Nf6 5. Nc3 {guard e4 and finish development} *
 
 [Event "Repertoire: Italian, vs Petrov"]
 [System "Italian"]
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 e5 2. Nf3 Nf6 3. Nxe5 d6 4. Nf3 Nxe4 5. d4 {3...Nxe4?? instead of 3...d6 is the copycat trap — see traps.pgn} *
+1. e4 {take the center and open the bishop's diagonal} e5 2. Nf3 {develop with a threat — e5 must be defended} Nf6 3. Nxe5 {take first — if he copies with 3...Nxe4?? that's the copycat trap, see traps.pgn} d6 4. Nf3 {retreat before the knight gets kicked — you keep the extra tempo} Nxe4 5. d4 {grab the center — Bd3 next hits the loose knight} *
 
 [Event "Repertoire: vs Scandinavian"]
 [System "Italian"]
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 d5 2. exd5 Qxd5 3. Nc3 Qa5 4. d4 Nf6 5. Nf3 *
+1. e4 {take the center and open the bishop's diagonal} d5 2. exd5 {take — the queen must come fetch it} Qxd5 3. Nc3 {develop with tempo on the queen} Qa5 4. d4 {full center while the queen wanders} Nf6 5. Nf3 {develop calmly — you're simply ahead on time} *
 
 [Event "Repertoire: vs Alekhine"]
 [System "Italian"]
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 Nf6 2. e5 Nd5 3. d4 d6 4. Nf3 dxe5 5. Nxe5 *
+1. e4 {take the center and open the bishop's diagonal} Nf6 2. e5 {push and chase — his knight dances, your pawns gain space} Nd5 3. d4 {take the full center he handed you} d6 4. Nf3 {develop and keep e5 propped up} dxe5 5. Nxe5 {recapture with the piece — the knight sits beautifully on e5} *
 
 [Event "Repertoire: vs French, Exchange"]
 [System "Italian"]
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 e6 2. d4 d5 3. exd5 exd5 4. Bd3 Bd6 5. Nf3 *
+1. e4 {take the center and open the bishop's diagonal} e6 2. d4 {the full center — the French lets you have it} d5 3. exd5 {trade into an open, simple game} exd5 4. Bd3 {best square: the bishop stares at h7} Bd6 5. Nf3 {develop and castle — easy plans, no theory} *
 
 [Event "Repertoire: vs Sicilian, Open"]
 [System "Italian"]
 [TrainAs "White"]
 [Result "*"]
 
-1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 *
+1. e4 {take the center and open the bishop's diagonal} c5 2. Nf3 {develop and prepare the d4 break} Nc6 3. d4 {open the center before Black finishes setting up} cxd4 4. Nxd4 {recapture — the knight dominates from d4} Nf6 5. Nc3 {guard e4 and finish development} *
 
 [Event "Repertoire: Caro-Kann, Exchange"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. d4 d5 3. exd5 cxd5 4. Bd3 Nc6 5. c3 Nf6 *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. d4 d5 {challenge e4 with full support} 3. exd5 cxd5 {recapture with the pawn and keep your share of the center} 4. Bd3 Nc6 {develop and lean on d4} 5. c3 Nf6 {develop — castle short soon} *
 
 [Event "Repertoire: Caro-Kann, Advance"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. d4 d5 3. e5 Bf5 {bishop out BEFORE ...e6 — the whole point of the Caro} 4. Nf3 e6 5. Be2 c5 *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. d4 d5 {challenge e4 with full support} 3. e5 Bf5 {bishop out BEFORE ...e6 — the whole point of the Caro} 4. Nf3 e6 {now close the wall — the bishop is already outside} 5. Be2 c5 {hit the base of his pawn chain at d4} *
 
 [Event "Repertoire: Caro-Kann, Classical"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 {4...Nd7?! invites the smothered-mate trap — see traps.pgn} 5. Ng3 Bg6 *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. d4 d5 {challenge e4 with full support} 3. Nc3 dxe4 {take — make the knight recapture and become a target} 4. Nxe4 Bf5 {hit the knight; 4...Nd7?! invites the smothered-mate trap — see traps.pgn} 5. Ng3 Bg6 {tuck the bishop away — it did its job getting out} *
 
 [Event "Repertoire: Caro-Kann, vs Two Knights"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. Nf3 d5 3. Nc3 Bg4 4. h3 Bxf3 5. Qxf3 e6 *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. Nf3 d5 {challenge e4 anyway — two knights don't stop it} 3. Nc3 Bg4 {pin — without d4 White can't easily fight your center} 4. h3 Bxf3 {take: retreating loses time, and the trade solves the Caro bishop} 5. Qxf3 e6 {solid wall — develop behind it} *
 
 [Event "Repertoire: Caro-Kann, vs 2.Nc3"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. Nc3 d5 3. Nf3 Bg4 {same position as the Two Knights line; 3.d4 dxe4 4.Nxe4 Bf5 transposes to the Classical} *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. Nc3 d5 {challenge e4 — the knight can't hold it alone} 3. Nf3 Bg4 {pin — same position as the Two Knights line; 3.d4 dxe4 4.Nxe4 Bf5 transposes to the Classical} *
 
 [Event "Repertoire: Caro-Kann, vs 2.Bc4 Hillbilly"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. Bc4 d5 3. exd5 cxd5 4. Bb3 Nf6 5. Nc3 Nc6 {see traps.pgn for 3.Bxd5?? and 4.Bb5+} *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. Bc4 d5 {hit bishop and e4 at once — his bishop bit on granite} 3. exd5 cxd5 {recapture — the bishop must move again} 4. Bb3 Nf6 {develop; d5 is safely yours} 5. Nc3 Nc6 {develop — see traps.pgn for 3.Bxd5?? and 4.Bb5+} *
 
 [Event "Repertoire: Caro-Kann, vs 2.Qh5 Wayward Queen"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. Qh5 d5 3. exd5 cxd5 4. d4 Nf6 5. Qd1 Nc6 {every queen grab loses her — see traps.pgn} *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. Qh5 d5 {ignore the queen and take the center — she has no targets here} 3. exd5 cxd5 {recapture — her sortie achieved nothing} 4. d4 Nf6 {develop with tempo — the knight attacks her from f6} 5. Qd1 Nc6 {develop; every queen grab loses her — see traps.pgn} *
 
 [Event "Repertoire: Caro-Kann, vs 2.d3"]
 [System "Caro-Kann"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. e4 c6 2. d3 d5 3. Nd2 e5 4. Ngf3 Bd6 *
+1. e4 c6 {prepare ...d5 backed by a pawn — the Caro recipe} 2. d3 d5 {claim the center — d3 won't fight for it} 3. Nd2 e5 {take the full center: you get to play like White here} 4. Ngf3 Bd6 {develop and guard e5 — a dream Caro} *
 
 [Event "Repertoire: Slav main line"]
 [System "Slav"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. d4 c6 2. c4 d5 3. Nf3 Nf6 4. Nc3 e6 *
+1. d4 c6 {same recipe as the Caro: prepare a pawn-backed ...d5} 2. c4 d5 {stake the center, fully supported} 3. Nf3 Nf6 {develop; keep the structure rock-solid} 4. Nc3 e6 {the solid triangle — d5 is held three times} *
 
 [Event "Repertoire: Slav, vs London"]
 [System "Slav"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. d4 c6 2. Bf4 d5 3. e3 Bf5 {mirror the bishop — same idea as the Caro} 4. Nf3 e6 5. Bd3 Bxd3 6. Qxd3 Nf6 *
+1. d4 c6 {same recipe as the Caro: prepare a pawn-backed ...d5} 2. Bf4 d5 {stake the center — the London won't contest it} 3. e3 Bf5 {mirror the bishop — same idea as the Caro, out before ...e6} 4. Nf3 e6 {close the wall — your bishop is already outside} 5. Bd3 Bxd3 {trade bishops — the simplest path to a clean game} 6. Qxd3 Nf6 {develop — castle next} *
 
 [Event "Repertoire: Slav, vs 2.Nf3"]
 [System "Slav"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. d4 c6 2. Nf3 d5 3. e3 Bf5 4. Bd3 Bxd3 5. Qxd3 e6 *
+1. d4 c6 {same recipe as the Caro: prepare a pawn-backed ...d5} 2. Nf3 d5 {stake the center, fully supported} 3. e3 Bf5 {bishop out before ...e6 — always in this system} 4. Bd3 Bxd3 {trade bishops — a clean, equal game} 5. Qxd3 e6 {now build the wall and develop behind it} *
 
 [Event "Repertoire: Slav, vs 2.e3"]
 [System "Slav"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. d4 c6 2. e3 d5 3. Bd3 Nf6 4. Nf3 Bg4 5. O-O e6 *
+1. d4 c6 {same recipe as the Caro: prepare a pawn-backed ...d5} 2. e3 d5 {stake the center, fully supported} 3. Bd3 Nf6 {develop — his bishop found nothing to bite on} 4. Nf3 Bg4 {bishop outside the wall — and it pins the knight} 5. O-O e6 {wall up; develop behind it} *
 
 [Event "Repertoire: Slav, vs 2.Nc3"]
 [System "Slav"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. d4 c6 2. Nc3 d5 3. Nf3 Nf6 4. Bf4 Bf5 5. e3 e6 *
+1. d4 c6 {same recipe as the Caro: prepare a pawn-backed ...d5} 2. Nc3 d5 {stake the center — the knight can't contest it} 3. Nf3 Nf6 {develop; keep the structure rock-solid} 4. Bf4 Bf5 {bishop out before ...e6, as always} 5. e3 e6 {wall up — everything is defended} *
 
 [Event "Repertoire: Slav, 2.e4 transposition"]
 [System "Slav"]
 [TrainAs "Black"]
 [Result "*"]
 
-1. d4 c6 2. e4 d5 {transposes straight into the Caro-Kann — follow those lines} *
+1. d4 c6 {same recipe as the Caro: prepare a pawn-backed ...d5} 2. e4 d5 {transposes straight into the Caro-Kann — follow those lines} *

@@ -5,6 +5,8 @@ import { makeDrill, userMoveIdxs } from '../lib/drill'
 import { buildDeck } from './TrapCards'
 import { bump, type Stat } from '../lib/history'
 import { describeGame, monthKey, newGames, type Game } from '../lib/sync'
+import { bookWalk, flagMoves } from '../lib/analyze'
+import { startEngine } from '../lib/engine'
 
 // Ported from the prototype's ?selftest=1 — same logic checks, now against the
 // fetched real seed files, plus a middleware round-trip. The app's one check.
@@ -23,7 +25,12 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
         l.moves.length >= 2 && userMoveIdxs(l).length >= 1,
       )
     const commented = lines.filter((l) => Object.keys(l.comments).length > 0).length
-    ok(`repertoire why-comments survive parsing (${commented} lines have them)`, commented >= 5)
+    ok(`repertoire why-comments survive parsing (${commented} lines have them)`, commented === 22)
+    // every miss must teach: each drillable user move carries a why-comment
+    const bare = lines.flatMap((l) =>
+      userMoveIdxs(l).filter((j) => !l.comments[l.moves[j].after]).map((j) => `${l.name}#${j}`),
+    )
+    ok(`every repertoire user move has a why (${bare.length} bare: ${bare.slice(0, 3).join(', ') || 'none'})`, bare.length === 0)
 
     const d = makeDrill(lines[0])
     d.autoMoves()
@@ -42,7 +49,7 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     const deck = buildDeck(traps)
     ok(`trap deck: ${deck.length} cards (expect >= 15)`, deck.length >= 15)
     const withWhy = deck.filter((c) => c.line.comments[c.line.moves[c.k].after]).length
-    ok(`trap cards carrying a why-comment: ${withWhy} (expect >= 12)`, withWhy >= 12)
+    ok(`every trap card carries a why-comment (${withWhy}/${deck.length})`, withWhy === deck.length)
     let cardsOk = true
     for (const c of deck) {
       const cd = makeDrill(c.line, c.k)
@@ -76,6 +83,39 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     ok('sync toast: draw', describeGame(drew) === 'You drew vs Opp · rapid')
     ok('month key is UTC YYYY-MM', /^\d{4}-\d{2}$/.test(monthKey(new Date())))
 
+    // analysis: book walk (ticket 016 — the left-book signal 003 feeds on)
+    const mkLine = (sans: string[], trainAs: 'White' | 'Black'): Line => {
+      const c = new Chess()
+      for (const s of sans) c.move(s)
+      return { idx: 0, name: sans.join(' '), system: 'T', trainAs, moves: c.history({ verbose: true }), comments: {} }
+    }
+    const book = [mkLine(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], 'White'), mkLine(['e4', 'c5', 'Nf3'], 'White')]
+    const whole = bookWalk(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5'], 'w', book)
+    ok('book: full-line match ends in book', whole?.leftAtPly === null && whole.matchedPlies === 5)
+    const meLeft = bookWalk(['e4', 'c5', 'Nc3'], 'w', book)
+    ok(
+      'book: my deviation flagged with expected move',
+      meLeft?.leftAtPly === 2 && meLeft.by === 'me' && meLeft.expectedSan === 'Nf3',
+    )
+    const oppLeft = bookWalk(['e4', 'd5'], 'w', book)
+    ok('book: opponent deviation flagged', oppLeft?.leftAtPly === 1 && oppLeft.by === 'opp')
+    ok('book: never-in-book is null', bookWalk(['d4', 'd5'], 'w', book) === null)
+
+    // analysis: blunder flagging on hand-made evals
+    const bg = new Chess()
+    for (const s of ['e4', 'e5', 'Qh5']) bg.move(s)
+    const bm = bg.history({ verbose: true })
+    const flags = flagMoves(bm, [20, 30, 20, -250], [[], [], ['g1f3', 'b8c6'], []], 'w')
+    ok(
+      'blunder: white swing ≥250cp flagged with best move',
+      flags.length === 1 && flags[0].ply === 2 && flags[0].severity === 'blunder' && flags[0].bestSan === 'Nf3',
+    )
+    ok('blunder: fen is the position before the move (013 card shape)', flags[0]?.fen === bm[2].before)
+    ok('blunder: pv converts to san (the why line)', flags[0]?.pvSan.join(' ') === 'Nf3 Nc6')
+    const bFlags = flagMoves(bm, [0, 0, 150, 150], [[], ['d7d5'], [], []], 'b')
+    ok('blunder: black swing sign handled, 150cp = mistake', bFlags.length === 1 && bFlags[0].ply === 1 && bFlags[0].severity === 'mistake')
+    ok('blunder: quiet moves stay unflagged', flagMoves(bm, [20, 25, 20, 30], [[], [], [], []], 'w').length === 0)
+
     setOut(res)
     ;(async () => {
       const payload = { probe: Math.floor(performance.now()) }
@@ -96,6 +136,25 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
         /* stays false */
       }
       setOut((o) => [...o, (archives ? 'PASS' : 'FAIL') + '  archives/ route serves the current month'])
+      let months = false
+      try {
+        const l = await (await fetch('/api/data/archives')).json()
+        months = Array.isArray(l) && l.includes(monthKey(new Date()))
+      } catch {
+        /* stays false */
+      }
+      setOut((o) => [...o, (months ? 'PASS' : 'FAIL') + '  archives month listing includes current month'])
+      // live engine: worker + wasm actually load and return a sane startpos eval
+      let engineOk = false
+      try {
+        const eng = startEngine()
+        const s = await eng.evalFen(new Chess().fen(), 80)
+        eng.quit()
+        engineOk = !!s.best && /^[a-h][1-8][a-h][1-8]/.test(s.best) && Math.abs(s.cp) < 150
+      } catch {
+        /* stays false */
+      }
+      setOut((o) => [...o, (engineOk ? 'PASS' : 'FAIL') + '  stockfish worker evals startpos'])
     })()
   }, [lines, traps])
 

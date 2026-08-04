@@ -4,9 +4,10 @@ import { emptyHistory, loadHistory, type History } from './lib/history'
 import { startSync } from './lib/sync'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
+import { Analysis } from './modes/Analysis'
 import { Selftest } from './modes/Selftest'
 
-type Mode = 'home' | 'lines' | 'traps' | 'selftest'
+type Mode = 'home' | 'lines' | 'traps' | 'analysis' | 'selftest'
 type Toast = { id: number; text: string }
 
 // "last synced Xs ago" — home screen only, no spinners (006)
@@ -31,7 +32,17 @@ export default function App() {
   const [dealNo, setDealNo] = useState(0) // remount key: fresh session per entry
   const [toasts, setToasts] = useState<Toast[]>([])
   const [syncedAt, setSyncedAt] = useState(0)
+  const [unseenN, setUnseenN] = useState(0)
   const toastId = useRef(0)
+
+  // home-card "N new" count — refreshed each time we land on home
+  useEffect(() => {
+    if (mode !== 'home') return
+    fetch('/api/data/sync-state')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((s: { unseen?: string[] }) => setUnseenN(s.unseen?.length ?? 0))
+      .catch(() => {})
+  }, [mode])
 
   useEffect(
     () =>
@@ -97,6 +108,8 @@ export default function App() {
     return wrap(<LineDrill key={dealNo} lines={lines} history={h} onExit={() => setMode('home')} />)
   if (mode === 'traps')
     return wrap(<TrapCards key={dealNo} traps={traps} history={h} onExit={() => setMode('home')} />)
+  if (mode === 'analysis')
+    return wrap(<Analysis key={dealNo} lines={lines} onExit={() => setMode('home')} />)
   if (mode === 'selftest') return wrap(<Selftest lines={lines} traps={traps} />)
 
   const lineStats = Object.values(h.lines)
@@ -131,6 +144,15 @@ export default function App() {
               {dealt} dealt · {Math.round((firstTry / dealt) * 100)}% first try
             </div>
           )}
+        </button>
+        <button className="modecard" onClick={() => go('analysis')}>
+          <h2>
+            Game analysis{' '}
+            {unseenN > 0 && <span className="badge gold">{unseenN} new</span>}
+          </h2>
+          <div className="sub">
+            engine-checks your real games · blunders + where you left book
+          </div>
         </button>
       </div>
       <a className="tiny" href="?selftest=1">
