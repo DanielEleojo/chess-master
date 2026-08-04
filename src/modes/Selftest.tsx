@@ -15,6 +15,7 @@ import type { Analysis } from '../lib/analyze'
 import { emptyHistory } from '../lib/history'
 import { CLUSTER_MIN, milestone, pickNext, ratingHistory } from '../lib/recommend'
 import { OWN_QUOTA, blunderCard, dealCards, type PCard } from '../lib/puzzles'
+import { moveKey, type LearnData } from '../lib/learn'
 
 // Ported from the prototype's ?selftest=1 — same logic checks, now against the
 // fetched real seed files, plus a middleware round-trip. The app's one check.
@@ -22,10 +23,12 @@ export function Selftest({
   lines,
   traps,
   tactics,
+  learn,
 }: {
   lines: Line[]
   traps: Line[]
   tactics: PCard[]
+  learn: LearnData
 }) {
   const [out, setOut] = useState<string[]>([])
 
@@ -48,6 +51,26 @@ export function Selftest({
       userMoveIdxs(l).filter((j) => !l.comments[l.moves[j].after]).map((j) => `${l.name}#${j}`),
     )
     ok(`every repertoire user move has a why (${bare.length} bare: ${bare.slice(0, 3).join(', ') || 'none'})`, bare.length === 0)
+
+    // Learn content (030/031/032): keying survives parsing and stays in sync
+    // with the shipped repertoire — validate-learn.mjs checks this at author
+    // time, this catches a live drift between the two files.
+    ok(
+      'moveKey formats move-number-qualified SAN',
+      moveKey(0, 'e4') === '1.e4' && moveKey(1, 'e5') === '1...e5' && moveKey(4, 'Bc4') === '3.Bc4',
+    )
+    for (const sys of ['Italian', 'Caro-Kann', 'Slav'])
+      ok(`learn: ${sys} brief is non-empty`, !!learn.systems[sys]?.plans && !!learn.systems[sys]?.pawnBreaks && !!learn.systems[sys]?.keySquares)
+    const learnGaps = lines.flatMap((l) =>
+      userMoveIdxs(l)
+        .filter((j) => l.comments[l.moves[j].after])
+        .filter((j) => !learn.lines[l.name]?.[moveKey(j, l.moves[j].san)])
+        .map((j) => `${l.name}#${j}`),
+    )
+    ok(
+      `every commented repertoire move has a learn.json entry (${learnGaps.length} gaps: ${learnGaps.slice(0, 3).join(', ') || 'none'})`,
+      learnGaps.length === 0,
+    )
 
     const d = makeDrill(lines[0])
     d.autoMoves()
@@ -371,7 +394,7 @@ export function Selftest({
       const up = await coachUp()
       setOut((o) => [...o, `PASS  coach voice: ${up ? `reachable (${MODEL})` : 'down — facts-only fallback active'}`])
     })()
-  }, [lines, traps, tactics])
+  }, [lines, traps, tactics, learn])
 
   const fails = out.filter((s) => s.startsWith('FAIL')).length
   return (

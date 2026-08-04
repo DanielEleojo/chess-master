@@ -654,6 +654,24 @@ button.tiny:hover {
 .panel li {
   margin: 3px 0;
 }
+/* Learn mode (030/032) — text-only, no board. Same panel chrome as the rail. */
+.learnbriefs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.learnbriefs p {
+  margin: 0;
+  line-height: 1.55;
+}
+/* the longer Learn teaching text, always expanded beside the why-comment (032) */
+.learnnote {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dim);
+}
 .overlay {
   position: fixed;
   inset: 0;

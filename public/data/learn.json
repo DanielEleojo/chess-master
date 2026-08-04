@@ -1,0 +1,170 @@
+{
+  "systems": {
+    "Italian": {
+      "plans": "Build the pawn center with c3 and d4, aim the light-squared bishop at f7 (the square only the king defends), finish developing fast, and castle short before starting anything sharp. Most Italian games are decided by who develops faster and who gets to f7 first.",
+      "pawnBreaks": "d4, played after c3 backs it up — the central strike that either wins space or trades into a favorable center. Occasionally f4 once castled, if Black's kingside stays passive.",
+      "keySquares": "f7 (the permanent weak point the whole opening targets), d5 (a strong outpost once the center pawns trade off), and c4/g5 for the bishop and knight that do the attacking."
+    },
+    "Caro-Kann": {
+      "plans": "Meet 1.e4 with c6 then d5, backed by a pawn from the start. Get the light-squared bishop out to f5 or g4 before closing the position with ...e6 — that's the one rule that separates the Caro-Kann from the French's bad-bishop problem. From there, trade pieces when offered, keep the structure solid, and look for a central break with ...c5 or ...e5 when White gives you the chance.",
+      "pawnBreaks": "...c5, hitting the base of White's chain in the Advance Variation; ...e5, when White plays passively (e.g. 2.d3) and never really fights for the center.",
+      "keySquares": "d5 (the point the whole opening is built to hold), and the c8-f5-g4 diagonal your light-squared bishop needs to reach before the pawn chain locks it in."
+    },
+    "Slav": {
+      "plans": "The same recipe as the Caro-Kann, aimed at 1.d4 instead: c6 then d5, fully supported. Get the light-squared bishop to f5 before playing ...e6, trade it off when a favorable trade is offered, and build the solid c6-d5-e6 triangle. If White plays 2.e4, the position transposes straight into the Caro-Kann.",
+      "pawnBreaks": "...c5 or ...e5 once development is finished, for central counterplay against a passive White setup.",
+      "keySquares": "d5 (held three times once the triangle is complete), and the c8-bishop's diagonal, same as in the Caro-Kann."
+    }
+  },
+  "lines": {
+    "Italian main line": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.Nf3": "Nf3 develops toward the center and immediately attacks e5, so Black is forced to react with a developing move of his own (Nc6) rather than doing something slower — you get a free tempo before the real fight starts.",
+      "3.Bc4": "Bc4 puts the bishop on its most active diagonal, bearing down on f7 — the only square in Black's camp defended solely by the king. Everything called the 'Italian Game' is built around keeping that diagonal open.",
+      "4.c3": "c3 doesn't do much by itself, but it prepares d4 with a pawn already backing it up, so when the center pawn advances it can't just be captured for free — it's the quiet move that sets up the real strike.",
+      "5.d4": "With c3 in place, d4 challenges Black's e5 pawn directly. Black usually has to give up the center (exd4) since holding it gets awkward, and you're left dictating the position.",
+      "6.cxd4": "Recapturing with the c-pawn keeps a full pawn on d4 and gives you a strong center; the position now looks like a Queen's Gambit-style center with an extra tempo from the early Bc4, and your plan is simply to finish developing and use the space."
+    },
+    "Italian, Two Knights": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.Nf3": "Nf3 develops toward the center and immediately attacks e5, so Black is forced to react with a developing move of his own (Nc6) rather than doing something slower — you get a free tempo before the real fight starts.",
+      "3.Bc4": "Bc4 puts the bishop on its most active diagonal, bearing down on f7 — the only square in Black's camp defended solely by the king. Everything called the 'Italian Game' is built around keeping that diagonal open.",
+      "4.Ng5": "Ng5 pounces on f7 a second time (bishop + knight both hit it), and Black has exactly one good answer: ...d5, blocking the bishop's diagonal and hitting your e4 pawn and the g5-knight at once. Anything else and f7 falls.",
+      "5.exd5": "Taking the pawn is simplest and strongest. If Black recaptures with the knight (5...Nxd5), 6.Nxf7 sacrifices the knight for a king hunt — the Fried Liver Attack, worked out move-by-move in traps.pgn. If Black instead plays 5...Na5 or 5...Nd4, you're just up a pawn with an easy game."
+    },
+    "Italian, vs Philidor setup": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.Nf3": "Nf3 develops toward the center and immediately attacks e5, so Black is forced to react with a developing move of his own (Nc6) rather than doing something slower — you get a free tempo before the real fight starts.",
+      "3.d4": "Black's 2...d6 defends e5 but does nothing else, so this is the moment to open the position with d4 before he finishes developing — Philidor players who don't know the theory usually just lose the center for nothing.",
+      "4.Nxd4": "Recapturing with the knight puts it on its best square, eyeing c6, e6, and f5, and keeps the position simple — you don't need anything fancier here, just centralize and develop.",
+      "5.Nc3": "Nc3 covers e4 (so Black can't win the pawn with ...Nxe4 tricks later) and brings out your last minor piece before castling — from here it's just Be2/Bc4, O-O, and you're better developed with more space."
+    },
+    "Italian, vs Petrov": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.Nf3": "Nf3 develops toward the center and immediately attacks e5, so Black is forced to react with a developing move of his own (Nc6) rather than doing something slower — you get a free tempo before the real fight starts.",
+      "3.Nxe5": "Black's 2...Nf6 counterattacks e4 instead of defending e5, so just take the free pawn on e5. If he copies you with 3...Nxe4??, that loses on the spot to 4.Qe2 forking the knight and pinning it to the king — see traps.pgn for the full line. A properly-played Petrov continues 3...d6 instead.",
+      "4.Nf3": "After 3...d6 kicks the knight, retreat it to f3 rather than somewhere fancier — you're simply a tempo up on a normal Petrov/Philidor structure because Black spent a move (d6) undoing the attack on your knight. Don't overthink this square.",
+      "5.d4": "With development done, d4 claims the full center. Black will likely recapture the pawn later or leave a knight loose on e4 — Bd3 is the natural follow-up, hitting that knight and forcing it to explain itself."
+    },
+    "vs Scandinavian": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.exd5": "Just take the pawn. Black's only way to get it back is to bring the queen out early with ...Qxd5, which is exactly what you want — every tempo you gain kicking that queen around is a tempo of free development.",
+      "3.Nc3": "Nc3 develops a piece and attacks the queen at the same time, forcing her to move again (usually to a5 or d6/d8) while you haven't lost any time at all — this is the whole point of meeting the Scandinavian this way.",
+      "4.d4": "Take the full center with d4 while Black's queen is still finding a safe square — you're now ahead in development and ahead in space, with no weaknesses of your own yet.",
+      "5.Nf3": "No need to chase anything else — just develop with Nf3, aim for Bc4/Be2 and O-O. The queen sortie has cost Black enough tempo that a normal developing plan wins the opening on its own."
+    },
+    "vs Alekhine": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.e5": "Alekhine's Defense invites you to push your pawns and gain space while chasing the knight around — 2.e5 kicks it immediately and starts that process. Every tempo the knight spends moving again is a tempo you spend building your center for free.",
+      "3.d4": "With the knight pushed back to d5, claim the full center with d4 — Black's whole opening is a gamble that he can attack this center later, so build it while you can and stay alert to ...d6 breaks.",
+      "4.Nf3": "Nf3 develops naturally and adds a defender to the e5 pawn before Black can undermine it with ...d6 — routine development is enough here, the center does the work.",
+      "5.Nxe5": "If Black trades on e5, recapture with the knight rather than the pawn — a knight on e5 is a monster outpost, hard to dislodge and eyeing c6/d7/f7, and you keep your pawn structure clean."
+    },
+    "vs French, Exchange": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.d4": "d4 claims the full classical center. Against the French this is the simplest response of all — you're not trying to prove anything fancy, just build the biggest center you can and develop naturally.",
+      "3.exd5": "The Exchange Variation trades off the center pawns and opens the position — it has a reputation for being drawish, but for a sub-1200 opponent an open, simple position where you just need to develop well and find the better plan (Bd3 aiming at h7) is a very good practical choice.",
+      "4.Bd3": "Bd3 is the bishop's best square in this structure — it aims straight at h7 and supports an eventual kingside attack (Ng5/Qh5-type ideas), and it's usually left there for the rest of the game rather than traded off.",
+      "5.Nf3": "Just develop naturally with Nf3, then O-O — the Exchange French doesn't demand memorized theory, only sound development. Once castled, look at Ne5, Re1, or a minority attack with c4 depending on how Black sets up."
+    },
+    "vs Sicilian, Open": {
+      "1.e4": "e4 grabs a full center pawn and opens the diagonal for the f1-bishop and the queen in one move — it's the most active first move White has, and every other move in this line follows from controlling e4/d5.",
+      "2.Nf3": "Nf3 develops and prepares the central d4 break that defines the Open Sicilian — it also rules out some of the sharpest sideline gambits Black could try, keeping the position within normal territory.",
+      "3.d4": "d4 opens the center at once, trading White's d-pawn for Black's c-pawn and handing you a lead in development — this is the whole point of playing 'Open' against the Sicilian rather than a slower system.",
+      "4.Nxd4": "Recapture with the knight; from d4 it controls a huge swath of the board (b5, c6, e6, f5) and is the strongest piece on the board until Black manages to challenge it.",
+      "5.Nc3": "Nc3 defends the e4 pawn (which is otherwise loose once the d-pawn is gone) and completes your minor-piece development — from here it's Be2 or Bc4, O-O, and a standard Open Sicilian middlegame."
+    },
+    "Caro-Kann, Exchange": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "d5 hits White's center pawn immediately, and because c6 is already played, it's fully supported — White can't just win it, and a trade here leaves you with a completely sound structure.",
+      "3...cxd5": "In the Exchange Variation, White trades on d5 and you recapture with the pawn, keeping a healthy central pawn on d5 and a fully symmetrical, solid structure — there's nothing to fear here, just develop normally.",
+      "4...Nc6": "Nc6 develops toward the center and adds pressure on White's d4 pawn — a natural developing move that also discourages White from expanding further with c4/e4-type breaks too easily.",
+      "5...Nf6": "Nf6 finishes your minor-piece development on that side, eyes e4, and clears the way to castle kingside next move — a completely comfortable, equal position."
+    },
+    "Caro-Kann, Advance": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "d5 hits White's center pawn immediately, and because c6 is already played, it's fully supported — White can't just win it, and a trade here leaves you with a completely sound structure.",
+      "3...Bf5": "This is the single most important idea in the whole Caro-Kann: get the light-squared bishop developed outside the pawn chain right now, before playing ...e6. In the French, that bishop gets stuck behind its own pawns forever — in the Caro, you get it out first.",
+      "4...e6": "Only now, with the bishop already safely developed, do you close the position with e6 — you get the same solid pawn chain the French has, but without the bad bishop problem.",
+      "5...c5": "c5 strikes at the base of White's pawn chain (the d4 pawn, which the e5 pawn depends on) — this is the standard way to fight an Advance-style structure, creating counterplay rather than just sitting passively behind your wall."
+    },
+    "Caro-Kann, Classical": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "d5 hits White's center pawn immediately, and because c6 is already played, it's fully supported — White can't just win it, and a trade here leaves you with a completely sound structure.",
+      "3...dxe4": "Take the pawn. White's knight has to recapture on e4, and a centralized knight like that (not yet defended by a pawn) becomes something you can develop against and gain time on.",
+      "4...Bf5": "Bf5 develops the bishop outside the pawn chain and attacks the e4-knight at the same time, forcing it to move again. Don't play the tempting 4...Nd7 here — it walks into a smothered-mate trap (Qe2, Nd6#) that's in traps.pgn precisely because Caro players fall for it so often.",
+      "5...Bg6": "When White's knight hops to g3 attacking the bishop, just retreat it to g6 — it's already served its purpose by getting outside the pawn chain, and from g6 it stays safe and out of the way while you finish developing."
+    },
+    "Caro-Kann, vs Two Knights": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "d5 challenges the center exactly as usual — White's two knights (Nf3 + Nc3) don't actually defend e4 enough to stop this break, so the Caro recipe works unchanged.",
+      "3...Bg4": "Bg4 pins the f3-knight to the queen. Because White hasn't played d4 yet, there's no easy way to challenge your center pawn on d5, so you get to develop actively and pressure the pinned knight.",
+      "4...Bxf3": "When kicked with h3, just take on f3 rather than retreating — retreating loses a tempo, and trading the bishop for the knight solves the Caro-Kann's classic 'bad bishop' problem for free since you already got full use out of it.",
+      "5...e6": "With the bishop's job done, e6 completes the solid pawn triangle and opens the way for your other pieces to develop and castle — a comfortable, sound position."
+    },
+    "Caro-Kann, vs 2.Nc3": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "d5 hits the center immediately; Nc3 alone doesn't defend e4, so White will have to either support it further (with d4 or Nf3) or trade — either way the standard Caro plan goes ahead unchanged.",
+      "3...Bg4": "Bg4 pins the knight, transposing to the same idea as the vs-Two-Knights line. If White instead plays 3.d4, the game usually continues 3...dxe4 4.Nxe4 Bf5, which transposes straight into the Classical Variation you already know — same plan, different move order."
+    },
+    "Caro-Kann, vs 2.Bc4 Hillbilly": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "d5 attacks both the e4 pawn and the c4-bishop in one move — the bishop went to c4 too early and now has nothing good to hit, since your center pawn just kicks it straight back.",
+      "3...cxd5": "After White trades on d5, recapture with the pawn — the c4-bishop now has to move a second time (it can't safely stay or take), so you've gained a full tempo over the normal Exchange structure.",
+      "4...Nf6": "Nf6 develops naturally and adds a defender to d5, which is now firmly yours — you're a tempo ahead of a normal Exchange Caro-Kann because of the bishop's wasted trip to c4.",
+      "5...Nc6": "Nc6 finishes development on that side. If White ever grabs the pawn with Bxd5?? or tries Bb5+ instead of retreating, both lose material outright — see traps.pgn for the exact punishment."
+    },
+    "Caro-Kann, vs 2.Qh5 Wayward Queen": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "The early queen sortie has no real target in the Caro-Kann (there's no f7 weakness to hit the way there is against 1...e5), so just ignore her and take the center with d5 — she'll have to retreat with a wasted move soon.",
+      "3...cxd5": "Recapture with the pawn; the queen trip to h5 achieved literally nothing for White while you built a completely normal, healthy center — you're simply ahead in development for free.",
+      "4...Nf6": "Nf6 develops and attacks the queen at the same time, forcing her to move yet again — every one of these moves is a free tempo for you, straight out of the 'don't bring your queen out early' rule.",
+      "5...Nc6": "Nc6 continues normal development. If White ever tries to grab material with that queen deep in your position, she gets trapped and lost outright — the exact lines are worked out in traps.pgn, so you don't need to calculate it over the board, just recognize the pattern."
+    },
+    "Caro-Kann, vs 2.d3": {
+      "1...c6": "c6 prepares ...d5 with a pawn already supporting it, so when you challenge the center you're not relying on a piece to hold the point — this one move is the entire idea of the Caro-Kann.",
+      "2...d5": "d3 is a passive move that doesn't contest the center at all, so d5 just claims it outright — you're effectively playing with an extra tempo compared to the main lines.",
+      "3...e5": "Because White never challenged the center, you can go further and grab a full pawn duo with e5 — this flips the roles, and you get to play the kind of open, central game White normally enjoys.",
+      "4...Bd6": "Bd6 develops naturally to its most active square and adds a defender to e5 — a big center, active pieces, and no weaknesses; this is about as good as a Caro-Kann position gets."
+    },
+    "Slav main line": {
+      "1...c6": "Exactly the same idea as the Caro-Kann, just against 1.d4 instead of 1.e4: c6 prepares ...d5 with pawn support already in place, so the center pawn can't just be won for free.",
+      "2...d5": "d5 stakes a claim in the center; because c6 already backs it up, White can't simply take it and keep the pawn — this is the whole point of the Slav structure.",
+      "3...Nf6": "Nf6 develops naturally and keeps everything defended — no weaknesses, no early commitments, just solid piece play while the center stays locked in your favor.",
+      "4...e6": "e6 completes the pawn triangle (c6-d5-e6), so the d5 pawn ends up defended multiple times over — this is the most solid structure Black can build against 1.d4, and it's very hard for White to crack open."
+    },
+    "Slav, vs London": {
+      "1...c6": "Exactly the same idea as the Caro-Kann, just against 1.d4 instead of 1.e4: c6 prepares ...d5 with pawn support already in place, so the center pawn can't just be won for free.",
+      "2...d5": "d5 stakes the center as usual; the London System's bishop went to f4 instead of fighting for the center directly, so this claim goes basically unchallenged.",
+      "3...Bf5": "Just like in the Caro-Kann, get the light-squared bishop out to f5 before playing ...e6 — here it also directly faces off against White's own bishop on f4, so a trade is often on the table on your terms.",
+      "4...e6": "With the bishop safely developed, e6 closes up the structure — the classic Slav/Caro problem of a bad bishop never comes up because you solved it first.",
+      "5...Bxd3": "When White's bishop lands on d3 offering the trade, just take it — trading down into a simple, equal position is a very reasonable practical choice, especially with fewer pieces on the board to go wrong with.",
+      "6...Nf6": "Nf6 finishes development on that side and clears the way to castle kingside next move — a clean, comfortable position with nothing to worry about."
+    },
+    "Slav, vs 2.Nf3": {
+      "1...c6": "Exactly the same idea as the Caro-Kann, just against 1.d4 instead of 1.e4: c6 prepares ...d5 with pawn support already in place, so the center pawn can't just be won for free.",
+      "2...d5": "Same idea as always: stake the center with d5, fully backed by the c6 pawn — Nf3 doesn't change the plan at all.",
+      "3...Bf5": "Get the bishop developed to f5 before closing the position with ...e6 — this rule never changes across the Slav/Caro family, regardless of what White's knight moves are.",
+      "4...Bxd3": "If White brings a bishop to d3 and offers the trade, take it — you reach a simple, equal position with no structural weaknesses on either side.",
+      "5...e6": "Only now, with the bishop's business finished, close up with e6 and develop the rest of your pieces behind the solid pawn chain."
+    },
+    "Slav, vs 2.e3": {
+      "1...c6": "Exactly the same idea as the Caro-Kann, just against 1.d4 instead of 1.e4: c6 prepares ...d5 with pawn support already in place, so the center pawn can't just be won for free.",
+      "2...d5": "d5 stakes a claim in the center; because c6 already backs it up, White can't simply take it and keep the pawn — this is the whole point of the Slav structure.",
+      "3...Nf6": "Nf6 develops naturally. White's e3 move blocks in his own light-squared bishop, so unlike some other lines you don't even need to rush your own bishop out — just develop normally.",
+      "4...Bg4": "With White's dark-squared bishop stuck behind e3, your light-squared bishop can still get out actively to g4, pinning the f3-knight and adding pressure — a small bonus on top of the usual solid structure.",
+      "5...e6": "e6 completes the pawn triangle now that the bishop is already out and active — from here just castle and finish development."
+    },
+    "Slav, vs 2.Nc3": {
+      "1...c6": "Exactly the same idea as the Caro-Kann, just against 1.d4 instead of 1.e4: c6 prepares ...d5 with pawn support already in place, so the center pawn can't just be won for free.",
+      "2...d5": "d5 stakes the center; a knight on c3 doesn't actually fight for d5 the way a pawn would, so the claim goes through cleanly.",
+      "3...Nf6": "Nf6 develops solidly, adding pressure toward the center and keeping everything defended before committing the light-squared bishop anywhere.",
+      "4...Bf5": "Same rule as every other line in this system: get the bishop to f5 (or g4) before playing ...e6, so it never gets locked behind your own pawn chain.",
+      "5...e6": "e6 finishes the pawn triangle with the bishop already safely out — the structure is complete and nothing is loose."
+    },
+    "Slav, 2.e4 transposition": {
+      "1...c6": "Exactly the same idea as the Caro-Kann, just against 1.d4 instead of 1.e4: c6 prepares ...d5 with pawn support already in place, so the center pawn can't just be won for free.",
+      "2...d5": "If White plays 2.e4 instead of a normal Slav move, you're simply in a Caro-Kann a move later (via transposition) — d5 takes you straight back to familiar territory, so follow whichever Caro-Kann line matches what White does next."
+    }
+  }
+}

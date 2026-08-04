@@ -7,15 +7,17 @@ import { milestone, ratingHistory, MILESTONES, type Milestone } from './lib/reco
 import { startSync, setUser, type Game } from './lib/sync'
 import { resolveChessUsername } from './lib/account'
 import { pushOfferable, subscribeToPush } from './lib/push'
+import { emptyLearn, type LearnData } from './lib/learn'
 import { CoachCard } from './components/CoachCard'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
 import { Puzzles } from './modes/Puzzles'
 import { Analysis } from './modes/Analysis'
 import { Spar, RUNGS } from './modes/Spar'
+import { Learn } from './modes/Learn'
 import { Selftest } from './modes/Selftest'
 
-type Mode = 'home' | 'lines' | 'traps' | 'puzzles' | 'analysis' | 'spar' | 'selftest'
+type Mode = 'home' | 'lines' | 'traps' | 'puzzles' | 'analysis' | 'spar' | 'learn' | 'selftest'
 type Toast = { id: number; text: string }
 
 // "last synced Xs ago" — home screen only, no spinners (006)
@@ -83,6 +85,7 @@ export default function App() {
   const [state, setState] = useState<'loading' | 'error' | 'ready'>('loading')
   const [lines, setLines] = useState<Line[]>([])
   const [traps, setTraps] = useState<Line[]>([])
+  const [learn, setLearn] = useState<LearnData>(emptyLearn())
   const historyRef = useRef<History>(emptyHistory())
   const [mode, setMode] = useState<Mode>(() =>
     new URLSearchParams(location.search).get('selftest') ? 'selftest' : 'home',
@@ -164,15 +167,17 @@ export default function App() {
   useEffect(() => {
     ;(async () => {
       try {
-        const [rep, trp, hist, puz] = await Promise.all([
+        const [rep, trp, hist, puz, lrn] = await Promise.all([
           fetch('/data/repertoire.pgn').then((r) => r.text()),
           fetch('/data/traps.pgn').then((r) => r.text()),
           loadHistory(),
           loadPuzzles(),
+          fetch('/data/learn.json').then((r) => r.json()),
         ])
         setLines(parseGames(rep))
         setTraps(parseGames(trp))
         setTactics(lichessCards(puz))
+        setLearn(lrn)
         historyRef.current = hist
         setState('ready')
       } catch (e) {
@@ -223,6 +228,7 @@ export default function App() {
         key={dealNo}
         lines={lines}
         history={h}
+        learn={learn}
         focus={focus}
         onExit={() => setMode('home')}
       />,
@@ -244,7 +250,9 @@ export default function App() {
     return wrap(<Analysis key={dealNo} lines={lines} onExit={() => setMode('home')} />)
   if (mode === 'spar')
     return wrap(<Spar key={dealNo} lines={lines} onExit={() => setMode('home')} />)
-  if (mode === 'selftest') return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} />)
+  if (mode === 'learn') return wrap(<Learn key={dealNo} learn={learn} onExit={() => setMode('home')} />)
+  if (mode === 'selftest')
+    return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} learn={learn} />)
 
   const lineStats = Object.values(h.lines)
   const drilled = lineStats.reduce((n, s) => n + s.seen, 0)
@@ -278,6 +286,11 @@ export default function App() {
               'not drilled yet'
             )}
           </span>
+        </button>
+        <button className="row" onClick={() => go('learn')}>
+          <span className="name">Learn</span>
+          <span className="what">plans, pawn breaks, and key squares for your three systems</span>
+          <span className="stat dim">reference</span>
         </button>
         <button className="row" onClick={() => go('traps')}>
           <span className="name">Trap cards</span>

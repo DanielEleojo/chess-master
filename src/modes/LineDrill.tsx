@@ -11,6 +11,7 @@ import { bump, byWeakness, saveHistory, type History } from '../lib/history'
 import { startEngine, type Engine } from '../lib/engine'
 import { computeFacts, sanLine } from '../lib/facts'
 import { coachSay } from '../lib/coach'
+import { moveKey, type LearnData } from '../lib/learn'
 
 // "why not my move?" (017) — never automatic, the engine only runs on click
 const WHY_MS = 500 // engine time per side of the tried-vs-line comparison
@@ -40,11 +41,13 @@ const PIECE: Record<string, string> = {
 export function LineDrill({
   lines,
   history,
+  learn,
   focus,
   onExit,
 }: {
   lines: Line[]
   history: History
+  learn: LearnData
   focus?: string // coach deep-link (018): deal this line first
   onExit: () => void
 }) {
@@ -52,6 +55,7 @@ export function LineDrill({
   const [missedBadge, setMissedBadge] = useState(false)
   const [prompt, setPrompt] = useState<{ text: string; cls: string }>({ text: '', cls: '' })
   const [coach, setCoach] = useState('')
+  const [learnText, setLearnText] = useState('')
   const [streak, setStreak] = useState(0)
   const [best, setBest] = useState(0)
   const [totals, setTotals] = useState({ linesDone: 0, ok: 0, tries: 0 })
@@ -114,6 +118,7 @@ export function LineDrill({
     setMissedBadge(st.current.missedNames.has(line.name))
     setPrompt({ text: 'Your move.', cls: '' })
     setCoach('')
+    setLearnText('')
     whyCtx.current = null
     setWhy(null)
     paint()
@@ -189,7 +194,9 @@ export function LineDrill({
     if (!s.drill || s.drill.done()) return
     s.tries++
     const line = lines[s.curIdx]
+    const ply = s.drill.i // expected move's ply — tryMove advances it only on a hit
     const r = s.drill.tryMove(from, to)
+    setLearnText(learn.lines[line.name]?.[moveKey(ply, r.exp.san)] ?? '')
     if (r.ok) {
       s.ok++
       s.attempts = 0
@@ -304,6 +311,7 @@ export function LineDrill({
           <div className={'feedback ' + prompt.cls}>
             <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
             <div className="coach">{coach}</div>
+            {learnText && <div className="learnnote">{learnText}</div>}
             {why === 'offer' && (
               <button className="tiny" onClick={explainMiss}>
                 why not my move?
