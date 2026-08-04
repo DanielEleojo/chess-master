@@ -48,4 +48,13 @@ Read against his round-1 ask ("the floor still beats me, add the randomness"), t
 
 Verified live: promotion advances the badge and both pickers mid-game, disables what's beaten, survives a reload, and stops cleanly at the top. `tsc` clean, selftest green, no console errors. Honest caveat — the ratchet was driven through a `window.cmPromote()` dev hook (same idiom as `cmMove`/`cmSpar`) rather than by actually mating the engine; scholar's mate lost 10/10 attempts against the floor, which is its own data point about how strong "Careless" still is. The `won → promote()` trigger is a single call site in `finished()`.
 
-Still open for his next sitting: does one win per rung climb too fast (best-of-three? a win *and* a clean game?), is the floor finally beatable in real play, clock or no clock, and whether spar-from-a-line earns its keep.
+## Round 3 reaction (Daniel, 2026-08-04): "2 wins is enough"
+
+The climb rate, answered before he'd played it: **`WINS_TO_CLIMB = 2`** (exported knob). One win is luck, two is a level. A first win banks and says so (`1/2 against Careless — win once more and it retires`); the second retires the rung and resets the count. Manual jumps reset it too — banked wins are per rung, not carried.
+
+- The count is `localStorage['cm.wins']` alongside the rung, shown as a gold `1/2` badge on the current rung in setup and as `n/2 wins here` in the mid-game panel.
+- **Default rung dropped to the floor (Careless).** Screenshotting the round-3 build caught it lying: everything below the current rung renders `✓ beaten — retired`, so the old default of Rookie claimed a win over Careless he had never played. Starting at the floor is the only honest default when the UI reads "below = beaten"; jumping ahead is one click.
+
+Verified live from a cleared state: 0/2 → 1/2 banks without moving the rung, 2/2 retires Careless and lands on Rookie at 0/2, a mid-game jump to Improver discards a banked win, all of it surviving reload. `tsc` clean, no console errors.
+
+Still open for his next sitting: is the floor beatable in real play now, does two-wins-per-rung climb at the right pace, clock or no clock, and whether spar-from-a-line earns its keep.

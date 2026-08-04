@@ -21,6 +21,9 @@ export const RUNGS: (Weak & { name: string; blurb: string })[] = [
   { name: 'Club player', nodes: 40000, multipv: 1, temp: 0, blurb: 'always its best move — you need a real idea' },
 ]
 
+// Round 4 (Daniel): one win is luck, two is a level. The climb knob.
+export const WINS_TO_CLIMB = 2
+
 const knobs = (r: Weak) =>
   r.temp === 0
     ? `${r.nodes} nodes · always best`
@@ -32,7 +35,10 @@ const mmss = (ms: number) =>
 export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
   // ponytail: localStorage, not data/*.json — the ladder rung is one number of UI
   // state, and the training record it might feed is still fog on the map.
-  const [rung, setRung] = useState(() => +(localStorage.getItem('cm.rung') ?? 1) || 0)
+  // starts at the floor: everything below the current rung renders "beaten", so any
+  // higher default would claim wins he never had. Jumping ahead is one click.
+  const [rung, setRung] = useState(() => +(localStorage.getItem('cm.rung') ?? 0) || 0)
+  const [wins, setWins] = useState(() => +(localStorage.getItem('cm.wins') ?? 0) || 0)
   const [pick, setPick] = useState<'w' | 'b' | 'r'>('w')
   const [lineIdx, setLineIdx] = useState(-1)
   const [playing, setPlaying] = useState(false)
@@ -42,6 +48,10 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
   const engRef = useRef<Engine | null>(null)
   const rungRef = useRef(rung)
   rungRef.current = rung
+  const winsRef = useRef(wins)
+  winsRef.current = wins
+  // manual jumps start the new rung's count from scratch — earned wins are per rung
+  const jumpTo = (i: number) => (setRung(i), setWins(0))
   const st = useRef({
     chess: new Chess(),
     my: 'w' as 'w' | 'b',
@@ -84,18 +94,25 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     return true
   }
 
-  // Round 3: a beaten rung is retired for good. Winning is the only thing that
-  // moves the ladder, and it only ever moves up — so the opponent stays just
-  // above him and the sparring never turns into farming a rung he's outgrown.
+  // Round 3: a beaten rung is retired for good — the ladder only ever goes up, so
+  // the opponent stays just above him instead of becoming something to farm.
+  // Round 4: it takes WINS_TO_CLIMB wins, so one lucky game doesn't move it.
   function promote() {
     const s = st.current
+    const cur = RUNGS[rungRef.current]
+    const w = winsRef.current + 1
+    if (w < WINS_TO_CLIMB) {
+      setWins(w)
+      s.over += ` ${w}/${WINS_TO_CLIMB} against ${cur.name} — win once more and it retires.`
+      return
+    }
     const next = Math.min(RUNGS.length - 1, rungRef.current + 1)
     if (next === rungRef.current) {
       s.over += ' Top rung — nothing above this one.'
       return
     }
-    s.over += ` ${RUNGS[rungRef.current].name} retired — you're on ${RUNGS[next].name} now.`
-    setRung(next)
+    s.over += ` ${cur.name} retired — you're on ${RUNGS[next].name} now.`
+    jumpTo(next)
   }
 
   async function engineMove(id: number) {
@@ -165,7 +182,10 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     return () => clearInterval(t)
   }, [playing])
 
-  useEffect(() => localStorage.setItem('cm.rung', String(rung)), [rung])
+  useEffect(() => {
+    localStorage.setItem('cm.rung', String(rung))
+    localStorage.setItem('cm.wins', String(wins))
+  }, [rung, wins])
 
   useEffect(() => () => engRef.current?.quit(), [])
 
@@ -184,16 +204,22 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
                 key={r.name}
                 disabled={i < rung}
                 style={{ display: 'block', width: '100%', textAlign: 'left', marginTop: 6 }}
-                onClick={() => setRung(i)}
+                onClick={() => jumpTo(i)}
               >
                 {i === rung ? '● ' : i < rung ? '✓ ' : '○ '}
                 <b>{r.name}</b> — {i < rung ? 'beaten — retired' : r.blurb}{' '}
                 <span className="tiny dim">({knobs(r)})</span>
+                {i === rung && wins > 0 && (
+                  <span className="badge gold">
+                    {' '}
+                    {wins}/{WINS_TO_CLIMB}
+                  </span>
+                )}
               </button>
             ))}
             <div className="tiny dim" style={{ marginTop: 8 }}>
-              beat a rung and it's gone for good — the ladder only goes up. Jump ahead whenever you
-              like; there's no way back down.
+              {WINS_TO_CLIMB} wins retires a rung for good — the ladder only goes up. Jump ahead
+              whenever you like; there's no way back down, and jumping resets the count.
             </div>
           </div>
           <div className="panel" style={{ marginTop: 12 }}>
@@ -262,7 +288,7 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
           <select
             style={{ display: 'block', width: '100%', marginTop: 6 }}
             value={rung}
-            onChange={(e) => setRung(+e.target.value)}
+            onChange={(e) => jumpTo(+e.target.value)}
           >
             {RUNGS.map((r, i) => (
               <option key={r.name} value={i} disabled={i < rung}>
@@ -271,7 +297,7 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
             ))}
           </select>
           <div className="tiny dim" style={{ marginTop: 6 }}>
-            up only, mid-game included — win and this rung retires itself
+            {wins}/{WINS_TO_CLIMB} wins here — up only, mid-game included
           </div>
         </div>
         <div className="panel">
