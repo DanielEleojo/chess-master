@@ -180,64 +180,63 @@ export function TrapCards({
         title="Trap cards"
         sub="the junk you actually face · one punishing move each · a miss returns this deal"
         onExit={onExit}
-        right={
-          <span className="badge">
-            {Math.min(ci + 1, cards.length)}/{cards.length}
-          </span>
-        }
       />
-      <div className="cards">
-        <div className="dots">
-          {cards.map((x, i) => (
-            <span
-              key={i}
-              className={'dot' + (x.result ? ' ' + x.result : '') + (i === ci ? ' cur' : '')}
-            />
-          ))}
-        </div>
-        {!done && c && (
-          <div className="card cardface">
+      {!done && c && (
+        <div className="play">
+          <div>
+            <div ref={wrap}>
+              <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
+            </div>
+            <div className="boardfoot">{sanUpto(c.line, c.k)}</div>
+          </div>
+          <div className="side">
+            <div className="dots">
+              {cards.map((x, i) => (
+                <span
+                  key={i}
+                  className={'dot' + (x.result ? ' ' + x.result : '') + (i === ci ? ' cur' : '')}
+                />
+              ))}
+            </div>
             <div className="meta">
-              <span className="badge">Trap</span> <b>{c.line.name}</b>{' '}
+              <span className="badge">Trap</span> <b>{c.line.name}</b>
               <span>you punish as {c.line.trainAs}</span>
             </div>
-            <div className="sofar">{sanUpto(c.line, c.k)}</div>
-            <div ref={wrap}>
-              <Board size={400} onReady={(api) => (cg.current = api)} onMove={onMove} />
+            <div className={'feedback ' + prompt.cls}>
+              <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
+              <div className="coach">{coach}</div>
             </div>
-            <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
-            <div className="coach">{coach}</div>
             {awaitNext && (
               <button className="primary" onClick={() => next(ci)}>
                 Next →
               </button>
             )}
           </div>
-        )}
-        {done && (
-          <div className="card cardface">
-            <h2>
-              {good}/{originals.length}
-            </h2>
-            <div className="sub">
-              {good === originals.length
-                ? 'clean sweep — they walk into these, you collect'
-                : 'missed traps come back first next deal'}
-            </div>
-            <ul className="misslist">
-              {originals.map((x, i) => (
-                <li key={i}>
-                  {x.result === 'good' ? '✓' : '✗'} {x.line.name} — move {Math.floor(x.k / 2) + 1}{' '}
-                  as {x.line.trainAs}
-                </li>
-              ))}
-            </ul>
-            <button className="primary" onClick={onExit}>
-              Home
-            </button>
+        </div>
+      )}
+      {done && (
+        <div className="scorecard">
+          <div className="scoreN">
+            {good}/{originals.length}
           </div>
-        )}
-      </div>
+          <div className="sub">
+            {good === originals.length
+              ? 'clean sweep — they walk into these, you collect'
+              : 'missed traps come back first next deal'}
+          </div>
+          <ul className="misslist">
+            {originals.map((x, i) => (
+              <li key={i}>
+                {x.result === 'good' ? '✓' : '✗'} {x.line.name} — move {Math.floor(x.k / 2) + 1} as{' '}
+                {x.line.trainAs}
+              </li>
+            ))}
+          </ul>
+          <button className="primary" onClick={onExit}>
+            Home
+          </button>
+        </div>
+      )}
     </>
   )
 }

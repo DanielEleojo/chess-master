@@ -58,8 +58,16 @@ export function Board({
     })
     ;(window as any).cmMove = (f: string, t: string) => onMoveRef.current(f, t) // dev hook: drive the board headlessly
     onReady(cg)
-    return () => cg.destroy()
+    // chessground places pieces from cached pixel bounds, so a fluid board has
+    // to tell it when the box changed or the pieces land off their squares
+    const ro = new ResizeObserver(() => cg.redrawAll())
+    ro.observe(el.current!)
+    return () => {
+      ro.disconnect()
+      cg.destroy()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  return <div ref={el} style={{ width: size, height: size }} />
+  // `size` is a ceiling, not a fixed width — below it the board shrinks to fit
+  return <div ref={el} style={{ width: '100%', maxWidth: size, aspectRatio: '1' }} />
 }

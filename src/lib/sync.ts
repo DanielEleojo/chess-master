@@ -31,6 +31,20 @@ const DRAWS = new Set([
   'timevsinsufficient',
 ])
 
+// His result in a game, crosstable-style: 1 won, 0 lost, ½ drew — plus the
+// opponent, so the analysis list can column them instead of writing a sentence.
+export function gameParts(g: Game) {
+  const meWhite = g.white.username.toLowerCase() === USER
+  const me = meWhite ? g.white : g.black
+  const cls = me.result === 'win' ? 'win' : DRAWS.has(me.result) ? 'draw' : 'loss'
+  return {
+    meWhite,
+    opp: (meWhite ? g.black : g.white).username,
+    cls: cls as 'win' | 'draw' | 'loss',
+    mark: cls === 'win' ? '1' : cls === 'draw' ? '½' : '0',
+  }
+}
+
 export function describeGame(g: Game): string {
   const meWhite = g.white.username.toLowerCase() === USER
   const me = meWhite ? g.white : g.black

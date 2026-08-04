@@ -112,7 +112,7 @@ export function LineDrill({
     cg.current!.set({ orientation: line.trainAs === 'White' ? 'white' : 'black' })
     setCur(line)
     setMissedBadge(st.current.missedNames.has(line.name))
-    setPrompt({ text: '', cls: '' })
+    setPrompt({ text: 'Your move.', cls: '' })
     setCoach('')
     whyCtx.current = null
     setWhy(null)
@@ -201,7 +201,7 @@ export function LineDrill({
       beep(true)
       const cmt = line.comments[r.exp.after]
       setCoach(cmt ? `✓ ${r.exp.san} — ${cmt}` : '')
-      setPrompt({ text: '', cls: '' })
+      setPrompt({ text: 'Your move.', cls: '' })
       whyCtx.current = null
       setWhy(null)
       if (s.drill.done()) later(450, lineDone)
@@ -277,44 +277,45 @@ export function LineDrill({
         sub="endless streak · a miss shows you why and comes back"
         onExit={onExit}
       />
-      <div className="drill">
+      <div className="play">
         <div>
           <div ref={wrap}>
             <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
           </div>
-          <div className="linetag">
+          <div className="boardfoot">
             {cur && (
               <>
                 <b>{cur.name}</b> <span className="badge">{cur.system}</span>{' '}
                 <span className="badge">you are {cur.trainAs}</span>
-                {missedBadge && <span className="badge bad"> back for revenge</span>}
+                {missedBadge && <span className="badge bad">back for revenge</span>}
               </>
             )}
           </div>
-          <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
-          <div className="coach">{coach}</div>
-          {why === 'offer' && (
-            <button className="tiny" onClick={explainMiss}>
-              why not my move?
-            </button>
-          )}
-          {why === 'busy' && <div className="tiny dim">engine checking your move…</div>}
-          {why !== null && typeof why === 'object' && (
-            <div className="panel" style={{ marginTop: 6 }}>
-              {why.text}
-              <div className="tiny dim" style={{ marginTop: 4 }}>
-                {why.tag}
-              </div>
-            </div>
-          )}
         </div>
         <div className="side">
           <div className="streakbox">
-            <div key={streak} className="streakN pulse">
+            <div key={streak} className={'streakN pulse' + (streak ? '' : ' zero')}>
               {streak}
             </div>
             <div className="dim">streak</div>
             <div className="dim">best {best}</div>
+          </div>
+          {/* feedback sits at board height — the answer lands where the eye is */}
+          <div className={'feedback ' + prompt.cls}>
+            <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
+            <div className="coach">{coach}</div>
+            {why === 'offer' && (
+              <button className="tiny" onClick={explainMiss}>
+                why not my move?
+              </button>
+            )}
+            {why === 'busy' && <div className="tiny dim">engine checking your move…</div>}
+            {why !== null && typeof why === 'object' && (
+              <div className="whynot">
+                {why.text}
+                <div className="tiny dim">{why.tag}</div>
+              </div>
+            )}
           </div>
           <div className="panel">
             <b>Up next</b>

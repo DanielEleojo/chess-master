@@ -11,8 +11,7 @@ import {
 } from '../lib/extend'
 import type { History } from '../lib/history'
 import type { Line } from '../lib/pgn'
-import { milestone, pickNext, ratingHistory, type Milestone, type Pick } from '../lib/recommend'
-import type { Game } from '../lib/sync'
+import { pickNext, type Milestone, type Pick } from '../lib/recommend'
 
 // "5... Nc6 6. Bc4 …" — number the proposed plies from the break onward
 const fmtPlies = (ply: number, sans: string[]) =>
@@ -30,15 +29,16 @@ export function CoachCard({
   history,
   unseen,
   lines,
+  ms,
   onGo,
 }: {
   history: History
   unseen: number
   lines: Line[]
+  ms: Milestone | null // read once in App and shown there as the climb ladder
   onGo: (mode: Pick['mode'], focusLine?: string, ownOnly?: boolean) => void
 }) {
   const [pick, setPick] = useState<Pick | null>(null)
-  const [ms, setMs] = useState<Milestone | null>(null)
   const [prose, setProse] = useState('')
   const [ext, setExt] = useState<ExtStore | null>(null)
   const [proposal, setProposal] = useState<string[] | null>(null)
@@ -48,26 +48,9 @@ export function CoachCard({
   useEffect(() => {
     let dead = false
     ;(async () => {
-      const [analyses, months, extStore] = await Promise.all([
-        loadAnalyses(),
-        fetch('/api/data/archives')
-          .then((r) => (r.ok ? (r.json() as Promise<string[]>) : []))
-          .catch(() => [] as string[]),
-        loadExt(),
-      ])
-      const games: Game[] = (
-        await Promise.all(
-          months.map((m) =>
-            fetch(`/api/data/archives/${m}`)
-              .then((r) => (r.ok ? r.json() : { games: [] }))
-              .catch(() => ({ games: [] })),
-          ),
-        )
-      ).flatMap((a) => a.games ?? [])
+      const [analyses, extStore] = await Promise.all([loadAnalyses(), loadExt()])
       if (dead) return
-      const m = milestone(ratingHistory(games))
       const p = pickNext(unseen, Object.values(analyses.games), history, extStore)
-      setMs(m)
       setPick(p)
       setExt(extStore)
       if (p.kind === 'extend' && p.ext) {
@@ -82,8 +65,8 @@ export function CoachCard({
           }
         }
       }
-      const mLine = m
-        ? `His ${m.timeClass} rating is ${m.rating} over ${m.games} games; the next milestone is ${m.next}.`
+      const mLine = ms
+        ? `His ${ms.timeClass} rating is ${ms.rating} over ${ms.games} games; the next milestone is ${ms.next}.`
         : ''
       const text = await coachPitch(`pitch:${p.kind}:${p.title}:${unseen}`, mLine, p)
       if (!dead && text) setProse(text)
@@ -91,12 +74,14 @@ export function CoachCard({
     return () => {
       dead = true
     }
-  }, [history, unseen, lines, refresh])
+  }, [history, unseen, lines, ms, refresh])
 
   if (!pick)
     return (
       <div className="coachcard">
-        <span className="badge gold">Coach says</span>
+        <span className="coachmark" aria-hidden="true">
+          ?
+        </span>
         <span className="tiny dim">looking at your games…</span>
       </div>
     )
@@ -127,21 +112,17 @@ export function CoachCard({
     setRefresh((n) => n + 1) // re-pick without the dismissed break
   }
 
-  const trend = ms && ms.trend !== 0 ? ` · ${ms.trend > 0 ? '+' : ''}${ms.trend} recent` : ''
   return (
     <div className="coachcard">
-      <div className="coachhead">
-        <span className="badge gold">Coach says</span>
-        {ms && (
-          <span className="tiny dim">
-            {ms.timeClass} {ms.rating} → next stop {ms.next}
-            {trend}
-          </span>
-        )}
-      </div>
-      {prose && <p className="coachprose">{prose}</p>}
+      {/* the annotator's mark — a coach's red pen on the move worth looking at */}
+      <span className="coachmark" aria-hidden="true">
+        ?
+      </span>
+      {/* without Ollama the pick's own evidence is the coach's voice — the note
+          is never left blank next to its mark */}
+      <p className="coachprose">{prose || pick.evidence[0]}</p>
       <ul className="coachwhy">
-        {pick.evidence.map((e) => (
+        {pick.evidence.slice(prose ? 0 : 1).map((e) => (
           <li key={e} className="tiny dim">
             {e}
           </li>

@@ -245,8 +245,7 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
             </span>
           }
         />
-        <div className="cards">
-          <div className="cardface" style={{ maxWidth: 560, textAlign: 'left', width: '100%' }}>
+        <div className="setup">
             <div className="panel" style={{ width: '100%' }}>
               <b>How strong?</b>
               {RUNGS.map((r, i) => (
@@ -305,10 +304,9 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
                 </div>
               )}
             </div>
-            <button className="primary" onClick={() => setPlaying(true)}>
-              Play {RUNGS[rung].name} →
-            </button>
-          </div>
+          <button className="primary" onClick={() => setPlaying(true)}>
+            Play {RUNGS[rung].name} →
+          </button>
         </div>
       </>
     )
@@ -331,19 +329,27 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
           </span>
         }
       />
-      <div className="drill">
+      <div className="play">
         <div>
           <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
-          <div className="linetag">
+          <div className="boardfoot">
             <span className="badge">you are {s.my === 'w' ? 'White' : 'Black'}</span>
-          </div>
-          <div
-            className={'prompt ' + (s.over ? (s.over.includes('You won') ? 'good' : 'bad') : '')}
-          >
-            {s.over || (s.thinking ? 'thinking…' : 'Your move.')}
           </div>
         </div>
         <div className="side">
+          {/* the state of play sits at board height, like every other mode */}
+          <div
+            className={
+              'feedback ' + (s.over ? (s.over.includes('You won') ? 'good' : 'bad') : '')
+            }
+            style={{ minHeight: 0 }}
+          >
+            <div
+              className={'prompt ' + (s.over ? (s.over.includes('You won') ? 'good' : 'bad') : '')}
+            >
+              {s.over || (s.thinking ? 'thinking…' : 'Your move.')}
+            </div>
+          </div>
           <div className="panel">
             <b>Strength</b>
             <select

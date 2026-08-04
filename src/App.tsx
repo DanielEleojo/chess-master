@@ -3,7 +3,8 @@ import { parseGames, type Line } from './lib/pgn'
 import { emptyHistory, loadHistory, type History } from './lib/history'
 import { loadAnalyses } from './lib/analyze'
 import { lichessCards, loadPuzzles, ownCards, type PCard } from './lib/puzzles'
-import { startSync } from './lib/sync'
+import { milestone, ratingHistory, MILESTONES, type Milestone } from './lib/recommend'
+import { startSync, USER, type Game } from './lib/sync'
 import { CoachCard } from './components/CoachCard'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
@@ -22,11 +23,57 @@ function LastSynced({ at }: { at: number }) {
     const t = setInterval(() => force((n) => n + 1), 5000)
     return () => clearInterval(t)
   }, [])
-  if (!at) return <div className="tiny dim">syncing…</div>
+  if (!at) return <span>syncing…</span>
+  return <span>synced {Math.max(0, Math.round((Date.now() - at) / 1000))}s ago</span>
+}
+
+// The milestone ladder (018) drawn to scale: every rung from his next stop up
+// to master, his marker where the rating actually lands. Rungs sit at even
+// spacing — it's a ladder he climbs, not a linear rating axis. The first entry
+// is the floor below the bottom milestone, so a sub-400 marker has somewhere
+// to sit; it carries no tick of its own.
+const LADDER = [MILESTONES[0] - 100, ...MILESTONES]
+
+function Climb({ ms }: { ms: Milestone }) {
+  const last = LADDER.length - 1
+  let i = LADDER.findIndex((_, k) => k < last && ms.rating < LADDER[k + 1])
+  if (i < 0) i = last - 1 // past the top rung — pin to the end
+  const raw = (i + (ms.rating - LADDER[i]) / (LADDER[i + 1] - LADDER[i])) / last
+  const pos = Math.min(100, Math.max(0, raw * 100))
   return (
-    <div className="tiny dim">
-      last synced {Math.max(0, Math.round((Date.now() - at) / 1000))}s ago
-    </div>
+    <section className="climb">
+      <div className="climbnow">
+        <span className="rating">{ms.rating}</span>
+        <span className="eyebrow">{ms.timeClass}</span>
+        {ms.trend !== 0 && (
+          <span className={`trend${ms.trend < 0 ? ' down' : ''}`}>
+            {ms.trend > 0 ? '+' : ''}
+            {ms.trend} last 10 games
+          </span>
+        )}
+      </div>
+      <div className="rail">
+        <span className="covered" style={{ width: `${pos}%` }} />
+        <span className="marker" style={{ left: `${pos}%` }} />
+        {MILESTONES.map((m, k) => {
+          const at = `${((k + 1) / last) * 100}%`
+          const kind = m === ms.next ? ' next' : k === MILESTONES.length - 1 ? ' last' : ''
+          return (
+            <span key={m}>
+              <span className={`rung-tick${kind}`} style={{ left: at }} />
+              <span className={`rung-label${kind}`} style={{ left: at }}>
+                {m}
+              </span>
+              {kind && (
+                <span className="rung-name" style={{ left: at }}>
+                  {kind === ' next' ? 'next stop' : 'master'}
+                </span>
+              )}
+            </span>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -48,7 +95,28 @@ export default function App() {
   const [own, setOwn] = useState<PCard[]>([])
   const [analysedN, setAnalysedN] = useState(0)
   const [rung, setRung] = useState(0) // sparring ladder, see Spar.tsx — localStorage
+  const [ms, setMs] = useState<Milestone | null>(null) // real rating off the archives
   const toastId = useRef(0)
+
+  // Rating ladder from the synced archives — read once at boot, shown in the
+  // home header and reused by the coach's pitch, so neither refetches it.
+  useEffect(() => {
+    ;(async () => {
+      const months: string[] = await fetch('/api/data/archives')
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => [])
+      const games: Game[] = (
+        await Promise.all(
+          months.map((m) =>
+            fetch(`/api/data/archives/${m}`)
+              .then((r) => (r.ok ? r.json() : { games: [] }))
+              .catch(() => ({ games: [] })),
+          ),
+        )
+      ).flatMap((a) => a.games ?? [])
+      setMs(milestone(ratingHistory(games)))
+    })()
+  }, [])
 
   // home-card "N new" count and his own tactics cards — both refreshed each time
   // we land on home, so a game analyzed this session is dealable straight after
@@ -172,16 +240,19 @@ export default function App() {
   const puzFirst = puzStats.reduce((n, s) => n + s.seen - s.missed, 0)
   return wrap(
     <div className="home">
-      <h1>Chess Master</h1>
-      <div className="sub">openings first — the rest hangs off this</div>
-      <CoachCard history={h} unseen={unseenN} lines={lines} onGo={go} />
-      <div className="modes">
-        <button className="modecard" onClick={() => go('lines')}>
-          <h2>Line drill</h2>
-          <div className="sub">
-            {lines.length} repertoire lines · endless streak · misses come back
-          </div>
-          <div className="stat">
+      <header className="sheethead">
+        <span className="eyebrow">Chess Master</span>
+        <span className="who">
+          {USER} · <LastSynced at={syncedAt} />
+        </span>
+      </header>
+      {ms && <Climb ms={ms} />}
+      <CoachCard history={h} unseen={unseenN} lines={lines} ms={ms} onGo={go} />
+      <div className="ledger">
+        <button className="row" onClick={() => go('lines')}>
+          <span className="name">Line drill</span>
+          <span className="what">{lines.length} repertoire lines · misses come back</span>
+          <span className="stat">
             {drilled > 0 ? (
               <>
                 <b>{drilled}</b> drilled · <b>{Math.round((clean / drilled) * 100)}%</b> clean
@@ -189,12 +260,12 @@ export default function App() {
             ) : (
               'not drilled yet'
             )}
-          </div>
+          </span>
         </button>
-        <button className="modecard" onClick={() => go('traps')}>
-          <h2>Trap cards</h2>
-          <div className="sub">{buildDeck(traps).length} punish-the-junk cards · 10 per deal</div>
-          <div className="stat">
+        <button className="row" onClick={() => go('traps')}>
+          <span className="name">Trap cards</span>
+          <span className="what">{buildDeck(traps).length} cards that punish junk openings</span>
+          <span className="stat">
             {dealt > 0 ? (
               <>
                 <b>{dealt}</b> dealt · <b>{Math.round((firstTry / dealt) * 100)}%</b> first try
@@ -202,15 +273,15 @@ export default function App() {
             ) : (
               'not dealt yet'
             )}
-          </div>
+          </span>
         </button>
-        <button className="modecard" onClick={() => go('puzzles')}>
-          <h2>Tactics</h2>
-          <div className="sub">
-            {own.length > 0 && <>your {own.length} flagged positions · </>}
-            {tactics.length} puzzles from your openings · 10 per deal
-          </div>
-          <div className="stat">
+        <button className="row" onClick={() => go('puzzles')}>
+          <span className="name">Tactics</span>
+          <span className="what">
+            {tactics.length} puzzles from your openings
+            {own.length > 0 && <> · {own.length} of your own positions</>}
+          </span>
+          <span className="stat">
             {puzzled > 0 ? (
               <>
                 <b>{puzzled}</b> solved · <b>{Math.round((puzFirst / puzzled) * 100)}%</b> first try
@@ -218,30 +289,25 @@ export default function App() {
             ) : (
               'not solved yet'
             )}
-          </div>
+          </span>
         </button>
-        <button className="modecard" onClick={() => go('analysis')}>
-          <h2>
-            Game analysis
-            {unseenN > 0 && <span className="badge gold">{unseenN} new</span>}
-          </h2>
-          <div className="sub">engine-checks your real games · blunders + where you left book</div>
-          <div className="stat">
+        <button className="row" onClick={() => go('analysis')}>
+          <span className="name">Game analysis</span>
+          <span className="what">engine-checks your real games for blunders</span>
+          <span className="stat">
+            {unseenN > 0 && <span className="new">{unseenN} new · </span>}
             <b>{analysedN}</b> analysed
-          </div>
+          </span>
         </button>
-        <button className="modecard wide" onClick={() => go('spar')}>
-          <h2>
-            Sparring <span className="badge gold">{RUNGS[rung].name}</span>
-          </h2>
-          <div className="sub">
-            play a weakened Stockfish · fresh game or on from a repertoire line
-          </div>
-          <div className="stat">beat it twice and the rung retires — the ladder only goes up</div>
+        <button className="row" onClick={() => go('spar')}>
+          <span className="name">Sparring</span>
+          <span className="what">play a Stockfish weak enough to beat</span>
+          <span className="stat">
+            rung <b>{rung + 1}</b>/{RUNGS.length} · {RUNGS[rung].name}
+          </span>
         </button>
       </div>
       <div className="homefoot">
-        <LastSynced at={syncedAt} />
         <a className="tiny" href="?selftest=1">
           selftest
         </a>

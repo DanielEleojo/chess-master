@@ -1,26 +1,27 @@
-/* Ported from prototypes/drill-flow.html — same dark board-hall look. */
+/* "Scoresheet" — the palette comes off a roll-up tournament board and a
+   mechanical clock: felt-dark squares, buff light squares, one red flag.
+   Ruled rows, no glow, no drop shadows. Every number is set in notation mono. */
 :root {
-  --bg: #141310;
-  --panel: #1e1c19;
-  --raise: #292621;
-  --ink: #ece9e4;
-  --dim: #9a958d;
-  --faint: #6b665e;
-  --green: #7fb069;
-  --red: #d1603d;
-  --gold: #dbb04a;
-  --line: #35322d;
-  --r: 12px;
-  --shadow: 0 10px 28px -18px #000, 0 1px 0 #ffffff08 inset;
-  --serif: ui-serif, Iowan Old Style, Georgia, serif;
+  --bg: #0f1c19; /* felt — the dark square, pushed down to page ground */
+  --panel: #16241f; /* board — surfaces sitting on the felt */
+  --raise: #1e3029; /* a lifted square: hover, inputs */
+  --ink: #eae0c9; /* buff — the light square, the paper */
+  --dim: #8b9c94;
+  --faint: #5f706a;
+  --green: #8fc46a;
+  --red: #d8452c; /* flag — the one that falls. Misses, blunders, the coach's mark */
+  --gold: #cfa64e; /* brass — earned only: streaks, cleared rungs, milestones */
+  --line: #24352f;
+  --r: 4px;
+  --shadow: 0 1px 0 #ffffff05 inset;
+  --mono: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", "SF Mono", monospace;
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: radial-gradient(1100px 520px at 50% -12%, #241f19 0%, transparent 70%), var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--ink);
   font:
     15px/1.45 system-ui,
@@ -39,10 +40,22 @@ h3 {
   letter-spacing: -0.015em;
 }
 h1 {
-  font-family: var(--serif);
   font-size: 40px;
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+/* notation voice: anything countable is set in mono with tabular figures */
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+/* tracked caps — the label register of a pairing sheet */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 h2 {
   font-size: 20px;
@@ -84,7 +97,7 @@ select {
 button:hover:not(:disabled),
 select:hover {
   border-color: var(--dim);
-  background: #322e28;
+  background: var(--raise);
 }
 button:active:not(:disabled) {
   transform: translateY(1px);
@@ -100,12 +113,12 @@ button:disabled {
 /* the one loud button on a screen — coach's call to action, "Play", "Next" */
 button.primary {
   background: var(--gold);
-  color: #1a1713;
+  color: #12211c;
   border-color: transparent;
   font-weight: 700;
 }
 button.primary:hover:not(:disabled) {
-  background: #e8be58;
+  background: #e0b75f;
   border-color: transparent;
 }
 .badge {
@@ -120,11 +133,11 @@ button.primary:hover:not(:disabled) {
 }
 .badge.bad {
   color: var(--red);
-  border-color: #d1603d55;
+  border-color: #d8452c55;
 }
 .badge.gold {
   color: var(--gold);
-  border-color: #dbb04a55;
+  border-color: #cfa64e55;
 }
 .card {
   background: var(--panel);
@@ -145,7 +158,7 @@ button.primary:hover:not(:disabled) {
   color: var(--red);
 }
 .coach {
-  background: #26221b;
+  background: #1a2a24;
   border-left: 3px solid var(--gold);
   padding: 10px 12px;
   border-radius: 0 8px 8px 0;
@@ -186,10 +199,14 @@ pre {
   font-size: 13px;
 }
 
-/* The board itself — chessground's brown theme, dimmed to sit in the dark hall.
-   Dark squares are 20% black painted over this colour, so one value retints both. */
+/* The board is a roll-up tournament board: buff light squares, vinyl green dark
+   ones. brown.css paints dark squares as 20% black over its background-color;
+   we override that overlay with a conic checker so the green is a real colour,
+   not a dimming. background-size 25% = a 2x2 tile, so 8 squares across. */
 cg-board {
-  background-color: #c9b696;
+  background-color: #e9ddc3;
+  background-image: repeating-conic-gradient(#4d7364 0% 25%, transparent 0% 50%);
+  background-size: 25% 25%;
 }
 .cg-wrap {
   border-radius: 6px;
@@ -200,10 +217,10 @@ cg-board {
 }
 /* brown.css highlights in lichess lime — retinted to the one accent */
 cg-board square.last-move {
-  background-color: #dbb04a4d;
+  background-color: #cfa64e5c;
 }
 cg-board square.selected {
-  background-color: #dbb04a66;
+  background-color: #cfa64e7a;
 }
 cg-board square.move-dest {
   background: radial-gradient(#0000004d 21%, #0000 0);
@@ -212,7 +229,7 @@ cg-board square.oc.move-dest {
   background: radial-gradient(#0000 78%, #00000040 78%);
 }
 cg-board square.move-dest:hover {
-  background: #dbb04a4d;
+  background: #cfa64e5c;
 }
 
 /* shared top bar: one back button per mode, instead of a stray Home in a sidebar */
@@ -237,61 +254,189 @@ cg-board square.move-dest:hover {
   flex: 1;
 }
 
-/* home */
-.home {
-  text-align: center;
-  padding-top: 32px;
+/* home — a scoresheet: header block, the coach's mark, then ruled rows */
+.sheethead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
 }
-.home h1 {
-  margin-bottom: 4px;
+.sheethead .who {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
 }
-.modes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin: 26px 0 22px;
-  text-align: left;
+
+/* the signature: the milestone ladder drawn to scale, every rung from his
+   next stop to master. His marker sits where the rating actually puts it. */
+.climb {
+  padding: 26px 0 22px;
+  border-bottom: 1px solid var(--line);
 }
-.modes .wide {
-  grid-column: 1 / -1;
+.climbnow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 22px;
 }
-@media (max-width: 620px) {
-  .modes {
-    grid-template-columns: 1fr;
+.climbnow .rating {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 46px;
+  line-height: 0.9;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.climbnow .trend {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+}
+.climbnow .trend.down {
+  color: var(--red);
+}
+.rail {
+  position: relative;
+  height: 2px;
+  background: #33473f;
+  margin: 0 8px;
+}
+/* the ground already covered, in brass — at 344 it's a nub, and that's honest */
+.rail .covered {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--gold);
+}
+.rung-tick {
+  position: absolute;
+  top: -5px;
+  width: 2px;
+  height: 12px;
+  background: #33473f;
+}
+.rung-tick.next {
+  background: var(--gold);
+  height: 18px;
+  top: -8px;
+}
+.rung-tick.last {
+  background: var(--ink);
+  height: 18px;
+  top: -8px;
+}
+.rung-label {
+  position: absolute;
+  top: 10px;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.rung-label.next {
+  color: var(--gold);
+}
+.rung-label.last {
+  color: var(--dim);
+}
+/* narrow: 13 rung numbers can't fit, so the ticks carry the ladder and only the
+   two labelled rungs — where he's headed and where it ends — keep their number */
+@media (max-width: 720px) {
+  .rung-label:not(.next):not(.last) {
+    display: none;
   }
 }
-.modecard {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  padding: 20px 22px;
-  text-align: left;
+.rung-name {
+  position: absolute;
+  top: 24px;
+  transform: translateX(-50%);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+/* his marker: a brass diamond standing on the rail, no stem to nowhere */
+.marker {
+  position: absolute;
+  top: -4px;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+
+/* the ledger: modes as ruled rows, not cards. Name, what it is, where he's at. */
+.ledger {
+  margin: 4px 0 22px;
+}
+.row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  box-shadow: var(--shadow);
+  align-items: baseline;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  padding: 15px 14px 15px 16px;
 }
-.modecard:hover:not(:disabled) {
-  border-color: #dbb04a80;
+/* the global button:hover would repaint every border — restate the row's rules
+   so only the left edge lights, like a selected square */
+.row:hover:not(:disabled) {
   background: var(--panel);
-  transform: translateY(-2px);
+  border-color: var(--line);
+  border-left-color: var(--gold);
 }
-.modecard h2 {
+.row .name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  min-width: 148px;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0;
 }
-/* the stat line: numbers in ink, words in dim — reads at a glance */
+.row .what {
+  color: var(--dim);
+  font-size: 13px;
+  flex: 1;
+}
+/* the stat line: numbers in brass mono, words dim — reads at a glance */
 .stat {
-  margin-top: auto;
-  padding-top: 10px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--faint);
+  white-space: nowrap;
 }
+/* brass is for numbers he earned; a pending count is just true, so it sits in ink */
 .stat b {
   color: var(--gold);
-  font-weight: 600;
+  font-weight: 500;
+}
+.stat .new {
+  color: var(--ink);
+}
+@media (max-width: 640px) {
+  .row {
+    flex-wrap: wrap;
+    gap: 4px 16px;
+  }
+  .row .name,
+  .row .what {
+    min-width: 0;
+    flex: none;
+    width: 100%;
+  }
 }
 .tiny {
   color: var(--faint);
@@ -317,81 +462,152 @@ button.tiny:hover {
   display: flex;
   gap: 12px;
   align-items: center;
-  justify-content: center;
   color: var(--faint);
 }
 
-/* coach says card (018) */
+/* coach says (018) — an annotator's note on the sheet. The red-pen "?" in the
+   gutter is how a coach marks the move worth looking at; no pill, no gradient. */
 .coachcard {
-  background: linear-gradient(90deg, #26221b, var(--panel) 55%);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--gold);
-  border-radius: var(--r);
-  padding: 16px 20px;
-  margin: 26px auto 0;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 4px 12px;
+  padding: 24px 0 26px;
+  border-bottom: 1px solid var(--line);
   text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: var(--shadow);
 }
-.coachhead {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
+.coachmark {
+  grid-row: 1 / span 4;
+  font-family: var(--mono);
+  font-size: 34px;
+  line-height: 0.72;
+  font-weight: 700;
+  color: var(--red);
+  user-select: none;
+}
+.coachcard > *:not(.coachmark) {
+  grid-column: 2;
 }
 .coachprose {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 62ch;
 }
 .coachwhy {
-  margin: 0;
-  padding-left: 18px;
+  margin: 2px 0 0;
+  padding-left: 15px;
+  list-style: none;
+}
+.coachwhy li::before {
+  content: "— ";
 }
 .coachgo {
-  align-self: flex-start;
+  justify-self: start;
+  margin-top: 12px;
   background: var(--gold);
-  color: #1a1713;
+  color: #12211c;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-weight: 700;
+  border-radius: var(--r);
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
 }
 .coachgo:hover {
-  background: #e8be58;
+  background: #e0b75f;
   border-color: transparent;
 }
 
-/* line drill (prototype .vB) */
-.drill {
+/* Every board mode shares one shell: the board on the left, and beside it the
+   rail carrying what the position is, what the coach says, and where the
+   session stands. Feedback used to sit *under* the board — 500px below where
+   the eye already is after a move. */
+.play {
   display: grid;
-  grid-template-columns: minmax(0, 500px) 1fr;
+  grid-template-columns: minmax(0, 470px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
-.drill .linetag {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.drill .prompt {
-  margin: 10px 0;
-}
-@media (max-width: 900px) {
-  .drill,
-  .analview {
+@media (max-width: 940px) {
+  .play {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+/* under the board: the notation that got us here, and nothing else */
+.boardfoot {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+}
+.boardfoot b {
+  color: var(--ink);
+  font-weight: 600;
 }
 .side {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+/* the rail's feedback block — the prompt and the coach's line, held at a fixed
+   height so the rail doesn't jump under the pointer between moves */
+.feedback {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--line);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  min-height: 108px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* .good/.bad are global text-colour utilities; on the box they'd tint every
+   child, so the why-comment would read as error text. The rule states the
+   verdict, the prompt inside carries the colour. */
+.feedback.good,
+.feedback.bad {
+  color: var(--ink);
+}
+.feedback.good {
+  border-left-color: var(--green);
+}
+.feedback.bad {
+  border-left-color: var(--red);
+}
+.feedback .prompt {
+  text-align: left;
+  min-height: 0;
+  font-size: 14px;
+}
+/* inside the rail the coach line is plain text — .feedback already carries the
+   left rule, so the standalone .coach chrome would double it */
+.feedback .coach {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-height: 0;
+  max-width: none;
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* the flex column would stretch this to full width and centre its label */
+.feedback .tiny {
+  align-self: flex-start;
+}
+.whynot {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .streakbox {
   text-align: center;
@@ -402,11 +618,17 @@ button.tiny:hover {
   box-shadow: var(--shadow);
 }
 .streakN {
-  font-size: 78px;
-  font-weight: 800;
+  font-family: var(--mono);
+  font-size: 72px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
   line-height: 1;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+}
+/* brass is earned — a streak of nothing hasn't been */
+.streakN.zero {
+  color: var(--faint);
 }
 .panel {
   background: var(--panel);
@@ -444,17 +666,12 @@ button.tiny:hover {
   max-width: 440px;
 }
 
-/* trap cards (prototype .vA) */
-.cards {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  text-align: center;
-}
+/* the deal's result strip — one dot per card, filled as they're answered.
+   It replaces the "1/10" badge, which said less. */
 .dots {
   display: flex;
   gap: 7px;
+  flex-wrap: wrap;
 }
 .dot {
   width: 11px;
@@ -472,28 +689,43 @@ button.tiny:hover {
 .dot.bad {
   background: var(--red);
 }
-.cardface {
+/* end of a deal — the only screen in a board mode with no board */
+.scorecard {
+  max-width: 440px;
+  margin: 40px auto;
+  text-align: center;
+}
+.scoreN {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 52px;
+  font-weight: 500;
+  color: var(--gold);
+  letter-spacing: -0.03em;
+  margin-bottom: 4px;
+}
+/* sparring's pre-game screen: pick a rung, pick a start, play */
+.setup {
+  max-width: 560px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
+}
+.setup > .panel {
+  width: 100%;
 }
 .meta {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   font-size: 13px;
   color: var(--dim);
   flex-wrap: wrap;
-  justify-content: center;
 }
 .meta b {
   color: var(--ink);
-}
-.sofar {
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
-  color: var(--dim);
 }
 .misslist {
   text-align: left;
@@ -514,32 +746,65 @@ button.tiny:hover {
 .gamelist {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 68vh;
+  max-height: 70vh;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
   padding-right: 6px;
 }
+/* his results as a crosstable: date, colour, opponent, then the score in the
+   only notation that ever mattered — 1, 0, ½. Same ruled row as home. */
 .gamerow {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  gap: 12px;
+  align-items: baseline;
+  width: 100%;
   text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  padding: 11px 12px;
+}
+.gamerow:hover:not(:disabled) {
+  background: var(--panel);
+  border-color: var(--line);
+  border-left-color: var(--gold);
 }
 .gamerow .when {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+  font-size: 11px;
+  min-width: 76px;
+}
+.gamerow .score {
+  font-family: var(--mono);
+  font-weight: 700;
+  width: 12px;
+  text-align: center;
+}
+.gamerow .score.win {
+  color: var(--green);
+}
+.gamerow .score.loss {
+  color: var(--red);
+}
+.gamerow .score.draw {
   color: var(--dim);
-  font-size: 12px;
-  min-width: 78px;
 }
-.gamerow .desc {
+.gamerow .opp {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.analview {
-  display: grid;
-  grid-template-columns: minmax(0, 430px) 1fr;
-  gap: 20px;
-  align-items: start;
+.gamerow .tc {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
 }
 .movelist {
   display: flex;
@@ -561,12 +826,15 @@ button.tiny:hover {
   background: var(--raise);
   outline: 1px solid var(--gold);
 }
+/* the ? / ?? glyphs already carry severity, the way an annotator writes them —
+   so colour only says "flagged", and weight separates the two */
 .mv.blunder {
   color: var(--red);
   font-weight: 700;
 }
 .mv.mistake {
-  color: var(--gold);
+  color: var(--red);
+  opacity: 0.7;
 }
 .progress {
   height: 6px;
@@ -597,7 +865,7 @@ button.tiny:hover {
 }
 .rung.on {
   border-color: var(--gold);
-  background: #26221b;
+  background: #1a2a24;
 }
 .rung.beaten {
   opacity: 0.4;

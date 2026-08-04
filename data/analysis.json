@@ -2,25 +2,25 @@
  "games": {
   "9856f6cc-8f8e-11f1-ab78-9c3c7501000f": {
    "uuid": "9856f6cc-8f8e-11f1-ab78-9c3c7501000f",
-   "at": "2026-08-03T23:24:42.935Z",
-   "v": 2,
+   "at": "2026-08-04T11:38:45.486Z",
+   "v": 4,
    "ms": 300,
    "color": "w",
    "desc": "You won vs ASM76 · rapid",
    "endTime": 1785798090,
    "evals": [
     34,
-    41,
-    35,
-    35,
-    32,
-    21,
+    39,
+    34,
+    27,
+    29,
+    20,
     65,
-    63,
-    67,
-    16,
-    57,
-    -47,
+    69,
+    54,
+    18,
+    53,
+    -50,
     9999,
     10000
    ],
@@ -32,10 +32,16 @@
      "best": "e1g1",
      "bestSan": "O-O",
      "pvSan": [
-      "O-O",
-      "Nf6"
+      "O-O"
      ],
-     "swingCp": 104,
+     "punishSan": [
+      "Qf6",
+      "Nxc3",
+      "Bb4",
+      "O-O",
+      "Nge7"
+     ],
+     "swingCp": 103,
      "severity": "mistake"
     }
    ],
@@ -44,7 +50,9 @@
     "matchedPlies": 5,
     "leftAtPly": 5,
     "by": "opp",
-    "expectedSan": null
+    "expectedSan": null,
+    "oppSan": "h6",
+    "outlived": false
    }
   },
   "e4f30b80-8f8d-11f1-bf80-6a5c6501000f": {
@@ -173,47 +181,49 @@
   },
   "992bef0d-8f8d-11f1-ad93-3bdf0f01000f": {
    "uuid": "992bef0d-8f8d-11f1-ad93-3bdf0f01000f",
-   "at": "2026-08-03T23:15:23.504Z",
+   "at": "2026-08-04T11:43:27.125Z",
+   "v": 4,
+   "ms": 300,
    "color": "w",
    "desc": "You won vs ChristopherBradstreet · bullet",
    "endTime": 1785797495,
    "evals": [
-    40,
-    25,
-    28,
-    -29,
-    57,
-    32,
-    32,
-    31,
-    57,
-    39,
-    57,
-    54,
-    95,
+    38,
+    13,
+    24,
+    -42,
+    52,
+    34,
+    37,
+    33,
+    60,
+    44,
+    63,
+    50,
+    103,
     73,
-    100,
-    -324,
-    -304,
-    -437,
-    20,
-    -248,
-    -41,
-    -224,
-    376,
-    -324,
-    104,
-    -352,
-    -114,
-    -152,
-    -187,
-    -559,
-    -519,
-    -637,
-    -458,
-    -598,
-    -647,
-    -676
+    103,
+    -308,
+    -317,
+    -439,
+    23,
+    -237,
+    -36,
+    -190,
+    337,
+    -294,
+    77,
+    -361,
+    -97,
+    -148,
+    -157,
+    -504,
+    -520,
+    -606,
+    -490,
+    -629,
+    -693,
+    -699
    ],
    "blunders": [
     {
@@ -222,7 +232,21 @@
      "fen": "r1bqk2r/ppppn1pp/2nb1p2/6B1/2BP4/2P5/PP3PPP/RN1QK1NR w KQkq - 0 8",
      "best": "g5c1",
      "bestSan": "Bc1",
-     "swingCp": 424,
+     "pvSan": [
+      "Bc1",
+      "Ng6",
+      "h4",
+      "b6",
+      "Qg4"
+     ],
+     "punishSan": [
+      "Ne5",
+      "Bxf6",
+      "gxf6",
+      "Nd2",
+      "O-O"
+     ],
+     "swingCp": 411,
      "severity": "blunder"
     },
     {
@@ -231,7 +255,21 @@
      "fen": "r1bqk2r/ppppn1pp/3b1p2/3Pn1B1/2B5/2P5/PP3PPP/RN1QK1NR w KQkq - 1 9",
      "best": "g5f6",
      "bestSan": "Bxf6",
-     "swingCp": 133,
+     "pvSan": [
+      "Bxf6",
+      "gxf6",
+      "Nd2",
+      "O-O",
+      "Ngf3"
+     ],
+     "punishSan": [
+      "Nxc4",
+      "Ne2",
+      "Ng6",
+      "Bg3",
+      "Bxg3"
+     ],
+     "swingCp": 122,
      "severity": "mistake"
     },
     {
@@ -240,16 +278,37 @@
      "fen": "r1bqk2r/pp1pn1pp/2pb1p2/3Pn3/2B2B2/2P5/PP3PPP/RN1QK1NR w KQkq - 0 10",
      "best": "f4e5",
      "bestSan": "Bxe5",
-     "swingCp": 268,
+     "pvSan": [
+      "Bxe5",
+      "fxe5"
+     ],
+     "punishSan": [
+      "Nxc4",
+      "Bxd6",
+      "dxc6",
+      "Bg3",
+      "Qxd1+"
+     ],
+     "swingCp": 260,
      "severity": "blunder"
     },
     {
      "ply": 20,
      "san": "Na3",
      "fen": "r1bqk2r/p2pn1pp/2pb1p2/4n3/2B2B2/2P5/PP3PPP/RN1QK1NR w KQkq - 0 11",
-     "best": "g1f3",
-     "bestSan": "Nf3",
-     "swingCp": 183,
+     "best": "f4e5",
+     "bestSan": "Bxe5",
+     "pvSan": [
+      "Bxe5"
+     ],
+     "punishSan": [
+      "Bxa3",
+      "Bxe5",
+      "Bxb2",
+      "Rb1",
+      "fxe5"
+     ],
+     "swingCp": 154,
      "severity": "mistake"
     },
     {
@@ -258,7 +317,21 @@
      "fen": "r1bqk2r/3pn1pp/2pb1p2/p3n3/2B2B2/N1P5/PP3PPP/R2QK1NR w KQkq - 0 12",
      "best": "d1d6",
      "bestSan": "Qxd6",
-     "swingCp": 700,
+     "pvSan": [
+      "Qxd6",
+      "Nf5",
+      "Qd2",
+      "d5",
+      "O-O-O"
+     ],
+     "punishSan": [
+      "Nxc4",
+      "Bxd6",
+      "Nxa3",
+      "Nf3",
+      "Nc4"
+     ],
+     "swingCp": 631,
      "severity": "blunder"
     },
     {
@@ -267,7 +340,17 @@
      "fen": "r2qk2r/3pn1pp/b1pb1p2/p3n3/1PB2B2/N1P5/P4PPP/R2QK1NR w KQkq - 1 13",
      "best": "c4a6",
      "bestSan": "Bxa6",
-     "swingCp": 456,
+     "pvSan": [
+      "Bxa6"
+     ],
+     "punishSan": [
+      "Bxa3",
+      "Bxa6",
+      "Rxa6",
+      "Nf3",
+      "Nxf3+"
+     ],
+     "swingCp": 438,
      "severity": "blunder"
     },
     {
@@ -276,25 +359,44 @@
      "fen": "r2qk2r/3pn1pp/2pb1p2/P7/2n2B2/2P5/P4PPP/R2QK1NR w KQkq - 0 15",
      "best": "f4d6",
      "bestSan": "Bxd6",
-     "swingCp": 372,
+     "pvSan": [
+      "Bxd6",
+      "Qxa5",
+      "Bb4",
+      "Qd5",
+      "Bxe7"
+     ],
+     "punishSan": [
+      "Nxd6",
+      "Bxd6",
+      "Qxa5",
+      "Ne2",
+      "Kf7"
+     ],
+     "swingCp": 347,
      "severity": "blunder"
-    },
-    {
-     "ply": 30,
-     "san": "Rd1",
-     "fen": "r2qk2r/3pn1pp/2pn1p2/P7/5B2/2P5/P4PPP/R3K1NR w KQkq - 0 16",
-     "best": "f4d6",
-     "bestSan": "Bxd6",
-     "swingCp": 118,
-     "severity": "mistake"
     },
     {
      "ply": 32,
      "san": "Rxd6",
      "fen": "1r1qk2r/3pn1pp/2pn1p2/P7/5B2/2P5/P4PPP/3RK1NR w Kk - 2 17",
-     "best": "f4d6",
-     "bestSan": "Bxd6",
-     "swingCp": 140,
+     "best": "g1f3",
+     "bestSan": "Nf3",
+     "pvSan": [
+      "Nf3",
+      "Nf7",
+      "Bxb8",
+      "Qxb8",
+      "O-O"
+     ],
+     "punishSan": [
+      "Rb1+",
+      "Rd1",
+      "Rxd1+",
+      "Kxd1",
+      "Kf7"
+     ],
+     "swingCp": 139,
      "severity": "mistake"
     }
    ],

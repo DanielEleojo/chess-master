@@ -144,13 +144,11 @@ export function Puzzles({
     return (
       <>
         <ModeHead title="Tactics" onExit={onExit} />
-        <div className="cards">
-          <div className="card cardface">
-            <h2>No cards yet</h2>
-            <div className="sub">
-              Run <code>python3 scripts/build-puzzles.py</code> to build the deck, or analyze a game
-              to get your own mistakes dealt back.
-            </div>
+        <div className="scorecard">
+          <h2>No cards yet</h2>
+          <div className="sub">
+            Run <code>python3 scripts/build-puzzles.py</code> to build the deck, or analyze a game
+            to get your own mistakes dealt back.
           </div>
         </div>
       </>
@@ -170,63 +168,64 @@ export function Puzzles({
             : 'your mistakes and your openings’ tactics · miss = see the shot, it returns this deal'
         }
         onExit={onExit}
-        right={
-          <span className="badge">
-            {Math.min(ci + 1, cards.length)}/{cards.length}
-          </span>
-        }
       />
-      <div className="cards">
-        <div className="dots">
-          {cards.map((x, i) => (
-            <span
-              key={i}
-              className={'dot' + (x.result ? ' ' + x.result : '') + (i === ci ? ' cur' : '')}
-            />
-          ))}
-        </div>
-        {!done && c && (
-          <div className="card cardface">
+      {!done && c && (
+        <div className="play">
+          <div>
+            <div ref={wrap}>
+              <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
+            </div>
+            <div className="boardfoot">{c.line.trainAs} to play</div>
+          </div>
+          <div className="side">
+            <div className="dots">
+              {cards.map((x, i) => (
+                <span
+                  key={i}
+                  className={'dot' + (x.result ? ' ' + x.result : '') + (i === ci ? ' cur' : '')}
+                />
+              ))}
+            </div>
             <div className="meta">
-              <span className={'badge' + (c.own ? ' gold' : '')}>{c.label}</span>{' '}
+              {/* his own flagged positions get the annotator's red, not brass —
+                  brass is for what he earned, and this card came from a miss */}
+              <span className={'badge' + (c.own ? ' bad' : '')}>{c.label}</span>
               <span>{c.sub}</span>
             </div>
-            <div className="sofar">{c.line.trainAs} to play</div>
-            <div ref={wrap}>
-              <Board size={400} onReady={(api) => (cg.current = api)} onMove={onMove} />
+            <div className={'feedback ' + prompt.cls}>
+              <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
+              <div className="coach">{coach}</div>
             </div>
-            <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
-            <div className="coach">{coach}</div>
             {awaitNext && (
               <button className="primary" onClick={() => next(ci)}>
                 Next →
               </button>
             )}
           </div>
-        )}
-        {done && (
-          <div className="card cardface">
-            <h2>
-              {good}/{originals.length}
-            </h2>
-            <div className="sub">
-              {good === originals.length
-                ? 'clean deal — that’s the pattern sticking'
-                : 'missed cards come back first next deal'}
-            </div>
-            <ul className="misslist">
-              {originals.map((x, i) => (
-                <li key={i}>
-                  {x.result === 'good' ? '✓' : '✗'} {x.label} — {x.sub}
-                </li>
-              ))}
-            </ul>
-            <button className="primary" onClick={onExit}>
-              Home
-            </button>
+        </div>
+      )}
+      {done && (
+        <div className="scorecard">
+          <div className="scoreN">
+            {good}/{originals.length}
           </div>
-        )}
-      </div>
+          <div className="sub">
+            {good === originals.length
+              ? 'clean deal — that’s the pattern sticking'
+              : 'missed cards come back first next deal'}
+          </div>
+          <ul className="misslist">
+            {originals.map((x, i) => (
+              <li key={i}>
+                {x.result === 'good' ? '✓' : '✗'} {x.label} — {x.sub}
+              </li>
+            ))}
+          </ul>
+          <button className="primary" onClick={onExit}>
+            Home
+          </button>
+        </div>
+      )}
     </>
   )
 }

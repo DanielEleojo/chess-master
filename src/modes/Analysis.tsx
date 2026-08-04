@@ -3,7 +3,7 @@ import { Chess } from 'chess.js'
 import type { Api } from 'chessground/api'
 import type { Key } from 'chessground/types'
 import type { Line } from '../lib/pgn'
-import { USER, describeGame } from '../lib/sync'
+import { describeGame, gameParts } from '../lib/sync'
 import { Board } from '../components/Board'
 import { ModeHead } from '../components/ModeHead'
 import { startEngine, type Engine } from '../lib/engine'
@@ -233,23 +233,28 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
           title="Game analysis"
           sub={`${games.length} games from your archives · pick one, the engine flags the damage`}
           onExit={onExit}
-          right={
-            unseen.size > 0 ? <span className="badge gold">{unseen.size} new</span> : undefined
-          }
+          right={unseen.size > 0 ? <span className="badge">{unseen.size} new</span> : undefined}
         />
         <div className="analysis">
           {!loaded && <div className="dim">loading archives…</div>}
           <div className="gamelist">
-            {games.map((g) => (
-              <button key={g.uuid} className="gamerow" onClick={() => open(g)}>
-                <span className="when">{new Date(g.end_time * 1000).toLocaleDateString()}</span>
-                <span className="desc">
-                  {g.white.username.toLowerCase() === USER ? '⚪' : '⚫'} {describeGame(g)}
-                </span>
-                {unseen.has(g.uuid) && <span className="badge gold">new</span>}
-                {analyzed.has(g.uuid) && <span className="badge">✓ analyzed</span>}
-              </button>
-            ))}
+            {games.map((g) => {
+              const { meWhite, opp, cls, mark } = gameParts(g)
+              return (
+                <button key={g.uuid} className="gamerow" onClick={() => open(g)}>
+                  <span className="when">
+                    {new Date(g.end_time * 1000).toLocaleDateString()}
+                  </span>
+                  <span className={'score ' + cls}>{mark}</span>
+                  <span className="opp">
+                    {meWhite ? '○' : '●'} {opp}
+                  </span>
+                  <span className="tc">{g.time_class}</span>
+                  {unseen.has(g.uuid) && <span className="badge">new</span>}
+                  {analyzed.has(g.uuid) && <span className="badge gold">✓ analyzed</span>}
+                </button>
+              )
+            })}
           </div>
         </div>
       </>
@@ -281,11 +286,12 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
         )}
         {err && <div className="bad">{err}</div>}
         {analysis && (
-          <div className="analview">
+          <div className="play">
             <div>
-              <Board size={430} onReady={(api) => (cg.current = api)} onMove={() => {}} />
-              <div className="sub" style={{ marginTop: 6 }}>
-                eval {fmtEval(analysis.evals[p] ?? 0)} · ← → or click a move
+              <Board size={470} onReady={(api) => (cg.current = api)} onMove={() => {}} />
+              <div className="boardfoot">
+                <b>eval {fmtEval(analysis.evals[p] ?? 0)}</b>
+                <span>← → or click a move</span>
               </div>
             </div>
             <div className="side">
