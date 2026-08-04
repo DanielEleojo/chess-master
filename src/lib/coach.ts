@@ -23,11 +23,14 @@ function persona(register: Register): string {
     : base
 }
 
+// 027: "idea" framing reuses the same facts to explain why the best move works,
+// without restating why the played move fails — for the follow-up Q&A button.
 export async function coachSay(
   key: string,
   context: string,
   facts: string[],
   register: Register = 'plain',
+  framing: 'fail' | 'idea' = 'fail',
 ): Promise<string | null> {
   return generate(
     key,
@@ -35,7 +38,11 @@ export async function coachSay(
 ${context}
 Verified facts (computed by the engine — the only truth you may use):
 ${facts.map((f) => '- ' + f).join('\n')}
-In 2-3 short sentences, explain why his move fails and why the better move works. Use only these facts — never invent moves, squares or tactics. No lists, no headers, plain words.`,
+${
+  framing === 'idea'
+    ? 'In 2-3 short sentences, explain the idea behind the better move and why it works. Use only these facts — never invent moves, squares or tactics. No lists, no headers, plain words.'
+    : 'In 2-3 short sentences, explain why his move fails and why the better move works. Use only these facts — never invent moves, squares or tactics. No lists, no headers, plain words.'
+}`,
   )
 }
 

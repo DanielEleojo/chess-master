@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Chess } from 'chess.js'
+import { Chess, type Move } from 'chess.js'
 import type { Api } from 'chessground/api'
 import type { Key } from 'chessground/types'
 import type { Line } from '../lib/pgn'
 import { describeGame, gameParts } from '../lib/sync'
-import { Board } from '../components/Board'
+import { Board, destsOf } from '../components/Board'
 import { ModeHead } from '../components/ModeHead'
 import { startEngine, type Engine } from '../lib/engine'
 import {
@@ -20,10 +20,14 @@ import {
   type BookInfo,
   type FullGame,
 } from '../lib/analyze'
-import { computeFacts } from '../lib/facts'
+import { computeFacts, sanLine } from '../lib/facts'
 import { coachSay } from '../lib/coach'
 
 const START_FEN = new Chess().fen()
+// "why not my move?" (LineDrill) — same latency budget for a live what-if eval
+const WHY_MS = 500
+const GENERIC_FALLBACK = 'Nothing hangs — the cost is positional'
+type WhatIf = null | 'busy' | { text: string; tag: string }
 
 function fmtEval(cp: number): string {
   if (Math.abs(cp) > 9000) return cp > 0 ? '#+' : '#−'
@@ -41,7 +45,21 @@ function bookSentence(b: BookInfo | null): string {
 
 // The 017 explanation: facts render instantly, the coach voice swaps in when
 // Ollama answers (or never does — facts stand alone by design, ADR 0001).
-function CoachNote({ a, bl }: { a: GameAnalysis; bl: Blunder }) {
+// 027 adds a fixed two-button follow-up: "what if X" (board goes interactive,
+// handled by the parent) and "what's the idea" (re-frames these same facts).
+function CoachNote({
+  a,
+  bl,
+  whatIfOn,
+  onToggleWhatIf,
+  whatIf,
+}: {
+  a: GameAnalysis
+  bl: Blunder
+  whatIfOn: boolean
+  onToggleWhatIf: () => void
+  whatIf: WhatIf
+}) {
   const facts = useMemo(
     () =>
       computeFacts({
@@ -56,10 +74,12 @@ function CoachNote({ a, bl }: { a: GameAnalysis; bl: Blunder }) {
   )
   const [prose, setProse] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(true)
+  const [idea, setIdea] = useState<null | 'busy' | string>(null)
   useEffect(() => {
     let live = true
     setProse(null)
     setWaiting(true)
+    setIdea(null)
     const ctx = `In his game (${a.desc}), playing ${a.color === 'w' ? 'White' : 'Black'}, on move ${Math.floor(bl.ply / 2) + 1} he played ${bl.san}; the engine prefers ${bl.bestSan}.`
     coachSay(`${a.uuid}:${bl.ply}`, ctx, facts, bl.severity === 'blunder' ? 'harsh' : 'plain').then((t) => {
       if (!live) return
@@ -70,6 +90,17 @@ function CoachNote({ a, bl }: { a: GameAnalysis; bl: Blunder }) {
       live = false
     }
   }, [a, bl, facts])
+
+  async function showIdea() {
+    setIdea('busy')
+    const ctx = `In his game (${a.desc}), playing ${a.color === 'w' ? 'White' : 'Black'}, on move ${Math.floor(bl.ply / 2) + 1} he asks what the idea behind ${bl.bestSan} is, instead of his ${bl.san}.`
+    const prose = await coachSay(`idea:${a.uuid}:${bl.ply}`, ctx, facts, 'plain', 'idea')
+    setIdea(prose ?? facts.join(' '))
+  }
+
+  // the generic positional fallback is only ever the sole fact — nothing concrete to reframe
+  const genericOnly = facts.length === 1 && facts[0].startsWith(GENERIC_FALLBACK)
+
   return (
     <div className="panel">
       <b>Coach on {bl.san}</b>
@@ -81,6 +112,28 @@ function CoachNote({ a, bl }: { a: GameAnalysis; bl: Blunder }) {
             ? 'coach voice'
             : 'coach voice offline — facts only'}
       </div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+        <button className="tiny" onClick={onToggleWhatIf}>
+          {whatIfOn ? 'close what if' : 'what if I played X?'}
+        </button>
+        {!genericOnly && (
+          <button className="tiny" onClick={showIdea}>
+            what's the idea here?
+          </button>
+        )}
+      </div>
+      {whatIfOn && whatIf === null && (
+        <div className="tiny dim">click a piece, then a square, on the board</div>
+      )}
+      {whatIf === 'busy' && <div className="tiny dim">engine checking your move…</div>}
+      {whatIf !== null && typeof whatIf === 'object' && (
+        <div className="whynot">
+          {whatIf.text}
+          <div className="tiny dim">{whatIf.tag}</div>
+        </div>
+      )}
+      {idea === 'busy' && <div className="tiny dim">coach voice thinking…</div>}
+      {idea !== null && typeof idea === 'string' && <div className="whynot">{idea}</div>}
     </div>
   )
 }
@@ -97,6 +150,8 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
   const [analysis, setAnalysis] = useState<GameAnalysis | null>(null)
   const [err, setErr] = useState('')
   const [p, setP] = useState(0) // plies played in the viewed position
+  const [whatIfOn, setWhatIfOn] = useState(false)
+  const [whatIf, setWhatIf] = useState<WhatIf>(null)
 
   const storeRef = useRef<AnalysisStore>({ games: {} })
   const engRef = useRef<Engine | null>(null)
@@ -175,7 +230,14 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     return c.history({ verbose: true })
   }, [sel, analysis])
 
-  // board follows the viewed ply; flagged next-move draws played-vs-best arrows
+  // leaving the flagged move (or the game) closes any open what-if exploration
+  useEffect(() => {
+    setWhatIfOn(false)
+    setWhatIf(null)
+  }, [p, sel])
+
+  // board follows the viewed ply; flagged next-move draws played-vs-best arrows.
+  // 027: while what-if is on, the board takes clicks for any legal move instead.
   useEffect(() => {
     if (!cg.current || !analysis || !moves.length) return
     const fen = p === 0 ? START_FEN : moves[p - 1].after
@@ -187,7 +249,15 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
       turnColor: pos.turn() === 'w' ? 'white' : 'black',
       check: pos.inCheck(),
       lastMove: p > 0 ? ([moves[p - 1].from, moves[p - 1].to] as Key[]) : undefined,
-      movable: { free: false, dests: new Map() },
+      movable:
+        whatIfOn && bl
+          ? {
+              free: false,
+              color: pos.turn() === 'w' ? 'white' : 'black',
+              dests: destsOf(pos),
+              showDests: true,
+            }
+          : { free: false, dests: new Map() },
     })
     cg.current.setAutoShapes(
       bl
@@ -205,7 +275,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
           ]
         : [],
     )
-  }, [p, analysis, moves])
+  }, [p, analysis, moves, whatIfOn])
 
   useEffect(() => {
     if (!analysis) return
@@ -216,6 +286,44 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [analysis, moves.length])
+
+  // 027 "what if I played X?": same shape as LineDrill's explainMiss — eval the
+  // clicked move and the engine's best move at equal depth, then let facts.ts
+  // walk both lines the same way it does for the real played move.
+  async function tryWhatIf(from: string, to: string) {
+    if (!whatIfOn || !analysis) return
+    const bl = analysis.blunders.find((b) => b.ply === p)
+    if (!bl) return
+    const cA = new Chess(bl.fen)
+    let mv: Move | null = null
+    try {
+      mv = cA.move({ from, to })
+    } catch {
+      try {
+        mv = cA.move({ from, to, promotion: 'q' }) // ponytail: auto-queen, no picker
+      } catch {
+        return
+      }
+    }
+    if (!mv) return
+    const cB = new Chess(bl.fen)
+    cB.move(bl.bestSan)
+    setWhatIf('busy')
+    const eng = (engRef.current ??= startEngine())
+    const [a, b] = await Promise.all([eng.evalFen(cA.fen(), WHY_MS), eng.evalFen(cB.fen(), WHY_MS)])
+    const facts = computeFacts({
+      fen: bl.fen,
+      played: mv.san,
+      best: bl.bestSan,
+      bestLine: [bl.bestSan, ...sanLine(cB.fen(), b.pv, 4)],
+      punishLine: sanLine(cA.fen(), a.pv, 5),
+      swingCp: Math.max(0, a.cp - b.cp),
+    })
+    setWhatIf({ text: facts.join(' '), tag: 'coach voice thinking…' })
+    const ctx = `He's exploring "what if I played ${mv.san}?" instead of ${bl.san} on move ${Math.floor(bl.ply / 2) + 1} of his game.`
+    const prose = await coachSay(`whatif:${bl.ply}:${mv.san}`, ctx, facts)
+    setWhatIf(prose ? { text: prose, tag: 'coach voice' } : { text: facts.join(' '), tag: 'coach voice offline — facts only' })
+  }
 
   if (err && !sel)
     return (
@@ -290,7 +398,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
         {analysis && (
           <div className="play">
             <div>
-              <Board size={470} onReady={(api) => (cg.current = api)} onMove={() => {}} />
+              <Board size={470} onReady={(api) => (cg.current = api)} onMove={tryWhatIf} />
               <div className="boardfoot">
                 <b>eval {fmtEval(analysis.evals[p] ?? 0)}</b>
                 <span>← → or click a move</span>
@@ -322,7 +430,18 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
                   ))}
                 </ul>
               </div>
-              {blCur && <CoachNote a={analysis} bl={blCur} />}
+              {blCur && (
+                <CoachNote
+                  a={analysis}
+                  bl={blCur}
+                  whatIfOn={whatIfOn}
+                  onToggleWhatIf={() => {
+                    setWhatIfOn((v) => !v)
+                    setWhatIf(null)
+                  }}
+                  whatIf={whatIf}
+                />
+              )}
               <div className="panel movelist">
                 {moves.map((m, j) => {
                   const f = flagOf(j)
