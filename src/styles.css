@@ -1,32 +1,51 @@
 /* Ported from prototypes/drill-flow.html — same dark board-hall look. */
 :root {
-  --bg: #161512;
-  --panel: #211f1c;
-  --ink: #e8e6e3;
+  --bg: #141310;
+  --panel: #1e1c19;
+  --raise: #292621;
+  --ink: #ece9e4;
   --dim: #9a958d;
+  --faint: #6b665e;
   --green: #7fb069;
   --red: #d1603d;
   --gold: #dbb04a;
   --line: #35322d;
+  --r: 12px;
+  --shadow: 0 10px 28px -18px #000, 0 1px 0 #ffffff08 inset;
+  --serif: ui-serif, Iowan Old Style, Georgia, serif;
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: var(--bg);
+  background: radial-gradient(1100px 520px at 50% -12%, #241f19 0%, transparent 70%), var(--bg);
+  background-attachment: fixed;
   color: var(--ink);
-  font: 15px/1.45 system-ui, sans-serif;
+  font:
+    15px/1.45 system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 #root {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 28px 20px 64px;
 }
 h1,
 h2,
 h3 {
   margin: 0 0 6px;
+  letter-spacing: -0.015em;
+}
+h1 {
+  font-family: var(--serif);
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: 20px;
 }
 .sub {
   color: var(--dim);
@@ -38,40 +57,81 @@ h3 {
 .bad {
   color: var(--red);
 }
+.good {
+  color: var(--green);
+}
 .center {
   text-align: center;
   padding: 80px 0;
 }
-button {
-  background: #2c2925;
+button,
+select {
+  background: var(--raise);
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 14px;
   font: inherit;
   cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    transform 0.12s;
 }
-button:hover {
+select {
+  padding: 7px 10px;
+}
+button:hover:not(:disabled),
+select:hover {
   border-color: var(--dim);
+  background: #322e28;
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+/* the one loud button on a screen — coach's call to action, "Play", "Next" */
+button.primary {
+  background: var(--gold);
+  color: #1a1713;
+  border-color: transparent;
+  font-weight: 700;
+}
+button.primary:hover:not(:disabled) {
+  background: #e8be58;
+  border-color: transparent;
 }
 .badge {
   display: inline-block;
-  background: #2c2925;
+  background: var(--raise);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 1px 9px;
   font-size: 12px;
   color: var(--dim);
+  white-space: nowrap;
 }
 .badge.bad {
   color: var(--red);
-  border-color: var(--red);
+  border-color: #d1603d55;
+}
+.badge.gold {
+  color: var(--gold);
+  border-color: #dbb04a55;
 }
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r);
   padding: 18px;
+  box-shadow: var(--shadow);
 }
 .prompt {
   min-height: 24px;
@@ -85,10 +145,10 @@ button:hover {
   color: var(--red);
 }
 .coach {
-  background: #2a2721;
+  background: #26221b;
   border-left: 3px solid var(--gold);
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: 0 8px 8px 0;
   min-height: 44px;
   font-size: 14px;
   max-width: 470px;
@@ -115,56 +175,165 @@ button:hover {
     transform: scale(1.18);
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
 pre {
   white-space: pre-wrap;
   font-size: 13px;
 }
 
+/* The board itself — chessground's brown theme, dimmed to sit in the dark hall.
+   Dark squares are 20% black painted over this colour, so one value retints both. */
+cg-board {
+  background-color: #c9b696;
+}
+.cg-wrap {
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px #0009,
+    0 18px 40px -22px #000;
+}
+/* brown.css highlights in lichess lime — retinted to the one accent */
+cg-board square.last-move {
+  background-color: #dbb04a4d;
+}
+cg-board square.selected {
+  background-color: #dbb04a66;
+}
+cg-board square.move-dest {
+  background: radial-gradient(#0000004d 21%, #0000 0);
+}
+cg-board square.oc.move-dest {
+  background: radial-gradient(#0000 78%, #00000040 78%);
+}
+cg-board square.move-dest:hover {
+  background: #dbb04a4d;
+}
+
+/* shared top bar: one back button per mode, instead of a stray Home in a sidebar */
+.modehead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.modehead h2 {
+  margin: 0;
+}
+.modehead .back {
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--dim);
+}
+.modehead .grow {
+  flex: 1;
+}
+
 /* home */
 .home {
   text-align: center;
-  padding-top: 40px;
+  padding-top: 32px;
+}
+.home h1 {
+  margin-bottom: 4px;
 }
 .modes {
-  display: flex;
-  gap: 18px;
-  justify-content: center;
-  margin: 28px 0;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 26px 0 22px;
+  text-align: left;
+}
+.modes .wide {
+  grid-column: 1 / -1;
+}
+@media (max-width: 620px) {
+  .modes {
+    grid-template-columns: 1fr;
+  }
 }
 .modecard {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 22px 26px;
-  width: 300px;
+  border-radius: var(--r);
+  padding: 20px 22px;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  box-shadow: var(--shadow);
 }
-.modecard:hover {
-  border-color: var(--gold);
+.modecard:hover:not(:disabled) {
+  border-color: #dbb04a80;
+  background: var(--panel);
+  transform: translateY(-2px);
+}
+.modecard h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+/* the stat line: numbers in ink, words in dim — reads at a glance */
+.stat {
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.stat b {
+  color: var(--gold);
+  font-weight: 600;
 }
 .tiny {
-  color: #666;
+  color: var(--faint);
   font-size: 11px;
   text-decoration: none;
+}
+a.tiny:hover {
+  color: var(--dim);
+}
+/* "why not my move?" and friends — an aside, not a button */
+button.tiny {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+button.tiny:hover {
+  background: none;
+  color: var(--gold);
+}
+.homefoot {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  color: var(--faint);
 }
 
 /* coach says card (018) */
 .coachcard {
-  background: var(--panel);
+  background: linear-gradient(90deg, #26221b, var(--panel) 55%);
   border: 1px solid var(--line);
   border-left: 3px solid var(--gold);
-  border-radius: 12px;
+  border-radius: var(--r);
   padding: 16px 20px;
-  margin: 24px auto 0;
-  max-width: 640px;
+  margin: 26px auto 0;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: var(--shadow);
 }
 .coachhead {
   display: flex;
@@ -175,7 +344,7 @@ pre {
 .coachprose {
   margin: 0;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 .coachwhy {
   margin: 0;
@@ -184,12 +353,16 @@ pre {
 .coachgo {
   align-self: flex-start;
   background: var(--gold);
-  color: #1a1a1a;
-  border: none;
+  color: #1a1713;
+  border: 1px solid transparent;
   border-radius: 8px;
   padding: 8px 14px;
   font-weight: 700;
   cursor: pointer;
+}
+.coachgo:hover {
+  background: #e8be58;
+  border-color: transparent;
 }
 
 /* line drill (prototype .vB) */
@@ -200,35 +373,56 @@ pre {
   align-items: start;
 }
 .drill .linetag {
-  margin-top: 10px;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .drill .prompt {
-  margin: 8px 0;
+  margin: 10px 0;
+}
+@media (max-width: 900px) {
+  .drill,
+  .analview {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .side {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 .streakbox {
   text-align: center;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r);
   padding: 16px 14px;
+  box-shadow: var(--shadow);
 }
 .streakN {
   font-size: 78px;
   font-weight: 800;
   line-height: 1;
   color: var(--gold);
+  font-variant-numeric: tabular-nums;
 }
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r);
   padding: 12px 14px;
   font-size: 14px;
+}
+.panel > b:first-child {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 600;
+  margin-bottom: 6px;
 }
 .panel ol {
   margin: 6px 0 0;
@@ -240,7 +434,7 @@ pre {
 .overlay {
   position: fixed;
   inset: 0;
-  background: #000a;
+  background: #000c;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -317,16 +511,15 @@ pre {
   flex-direction: column;
   gap: 14px;
 }
-.badge.gold {
-  color: var(--gold);
-  border-color: var(--gold);
-}
 .gamelist {
   display: flex;
   flex-direction: column;
   gap: 6px;
   max-height: 68vh;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+  padding-right: 6px;
 }
 .gamerow {
   display: flex;
@@ -362,10 +555,10 @@ pre {
   border-radius: 4px;
 }
 .mv:hover {
-  background: #2c2925;
+  background: var(--raise);
 }
 .mv.cur {
-  background: #2c2925;
+  background: var(--raise);
   outline: 1px solid var(--gold);
 }
 .mv.blunder {
@@ -385,12 +578,36 @@ pre {
 .progress > div {
   height: 100%;
   background: var(--gold);
+  transition: width 0.2s;
 }
 .bl {
   cursor: pointer;
 }
 .bl:hover {
   text-decoration: underline;
+}
+
+/* Sparring ladder (014) — rungs as a list you climb, beaten ones struck out */
+.rung {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-top: 6px;
+  padding: 9px 12px;
+}
+.rung.on {
+  border-color: var(--gold);
+  background: #26221b;
+}
+.rung.beaten {
+  opacity: 0.4;
+}
+.rung .rname {
+  font-weight: 600;
+}
+.rung .rknobs {
+  color: var(--faint);
+  font-size: 11px;
 }
 
 /* Sync toasts (015) — non-blocking corner stack, click to dismiss */
@@ -414,4 +631,5 @@ pre {
   font-size: 13px;
   cursor: pointer;
   text-align: left;
+  box-shadow: var(--shadow);
 }

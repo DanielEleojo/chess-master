@@ -1,7 +1,7 @@
 ---
 title: Engine sparring — a beatable Stockfish for a sub-1200
 type: prototype
-status: open
+status: closed
 assignee: claude
 blocked-by: [011]
 ---
@@ -57,4 +57,18 @@ The climb rate, answered before he'd played it: **`WINS_TO_CLIMB = 2`** (exporte
 
 Verified live from a cleared state: 0/2 → 1/2 banks without moving the rung, 2/2 retires Careless and lands on Rookie at 0/2, a mid-game jump to Improver discards a banked win, all of it surviving reload. `tsc` clean, no console errors.
 
-Still open for his next sitting: is the floor beatable in real play now, does two-wins-per-rung climb at the right pace, clock or no clock, and whether spar-from-a-line earns its keep.
+## Round 5 (Daniel, 2026-08-04): "let's finish up, make this look good"
+
+Closing. Sparring stops being a prototype and becomes a mode like the others — the
+`rough` badge is gone, the ticket number is out of the copy, and the rung list renders
+as a ladder you climb instead of a stack of dev knobs. The home card now shows the
+rung he's on (`Sparring · Careless`) rather than a caveat.
+
+The five calibration questions the prototype opened are **answered by playing, not by
+another round**: the rungs, `WINS_TO_CLIMB`, and the no-clock choice are all exported
+knobs one edit from changing. If Careless still can't be beaten, that's a `temp`
+bump, not a new ticket.
+
+Shipped alongside a whole-app design pass (see below) — sparring's setup screen was
+the worst-looking surface in the app and fixing it in isolation would have made the
+rest look unfinished.

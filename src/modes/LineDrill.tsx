@@ -4,6 +4,7 @@ import type { Api } from 'chessground/api'
 import type { Line } from '../lib/pgn'
 import { makeDrill, type Drill } from '../lib/drill'
 import { Board, syncBoard } from '../components/Board'
+import { ModeHead } from '../components/ModeHead'
 import { beep, shake, useLater } from '../lib/fx'
 import { loadExt, saveExt, tailGrace, type ExtStore } from '../lib/extend'
 import { bump, byWeakness, saveHistory, type History } from '../lib/history'
@@ -259,7 +260,8 @@ export function LineDrill({
   }
 
   useEffect(() => {
-    ;(window as any).cmExpected = () => // dev hook, pairs with cmMove
+    ;(window as any).cmExpected = () =>
+      // dev hook, pairs with cmMove
       st.current.drill && !st.current.drill.done() ? st.current.drill.expected() : null
     void loadExt().then((e) => (extRef.current = e))
     nextLine()
@@ -269,82 +271,92 @@ export function LineDrill({
 
   const acc = totals.tries ? Math.round((totals.ok / totals.tries) * 100) : 100
   return (
-    <div className="drill">
-      <div>
-        <div ref={wrap}>
-          <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
-        </div>
-        <div className="linetag">
-          {cur && (
-            <>
-              <b>{cur.name}</b> <span className="badge">{cur.system}</span>{' '}
-              <span className="badge">you are {cur.trainAs}</span>
-              {missedBadge && <span className="badge bad"> back for revenge</span>}
-            </>
+    <>
+      <ModeHead
+        title="Line drill"
+        sub="endless streak · a miss shows you why and comes back"
+        onExit={onExit}
+      />
+      <div className="drill">
+        <div>
+          <div ref={wrap}>
+            <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
+          </div>
+          <div className="linetag">
+            {cur && (
+              <>
+                <b>{cur.name}</b> <span className="badge">{cur.system}</span>{' '}
+                <span className="badge">you are {cur.trainAs}</span>
+                {missedBadge && <span className="badge bad"> back for revenge</span>}
+              </>
+            )}
+          </div>
+          <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
+          <div className="coach">{coach}</div>
+          {why === 'offer' && (
+            <button className="tiny" onClick={explainMiss}>
+              why not my move?
+            </button>
+          )}
+          {why === 'busy' && <div className="tiny dim">engine checking your move…</div>}
+          {why !== null && typeof why === 'object' && (
+            <div className="panel" style={{ marginTop: 6 }}>
+              {why.text}
+              <div className="tiny dim" style={{ marginTop: 4 }}>
+                {why.tag}
+              </div>
+            </div>
           )}
         </div>
-        <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
-        <div className="coach">{coach}</div>
-        {why === 'offer' && (
-          <button className="tiny" onClick={explainMiss}>
-            why not my move?
-          </button>
-        )}
-        {why === 'busy' && <div className="tiny dim">engine checking your move…</div>}
-        {why !== null && typeof why === 'object' && (
-          <div className="panel" style={{ marginTop: 6 }}>
-            {why.text}
-            <div className="tiny dim" style={{ marginTop: 4 }}>{why.tag}</div>
+        <div className="side">
+          <div className="streakbox">
+            <div key={streak} className="streakN pulse">
+              {streak}
+            </div>
+            <div className="dim">streak</div>
+            <div className="dim">best {best}</div>
+          </div>
+          <div className="panel">
+            <b>Up next</b>
+            <ol>
+              {nextUp.map((n, i) => (
+                <li key={i}>
+                  {n.name}
+                  {n.missed && (
+                    <>
+                      {' '}
+                      <span className="badge bad">missed</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="panel dim">
+            {totals.linesDone} lines · {totals.ok}/{totals.tries} moves · {acc}% accuracy
+          </div>
+          <button onClick={endSession}>End session</button>
+        </div>
+        {over && (
+          <div className="overlay">
+            <div className="card">
+              <h2>Session over</h2>
+              <p>
+                {totals.linesDone} lines · {totals.ok}/{totals.tries} moves · best streak{' '}
+                <b style={{ color: 'var(--gold)' }}>{best}</b>
+              </p>
+              <p className="dim">
+                {st.current.missedNames.size
+                  ? 'Missed: ' + [...st.current.missedNames].join(', ')
+                  : 'Nothing missed. Machine.'}
+              </p>
+              <button className="primary" onClick={onExit}>
+                Home
+              </button>
+            </div>
           </div>
         )}
       </div>
-      <div className="side">
-        <div className="streakbox">
-          <div key={streak} className="streakN pulse">
-            {streak}
-          </div>
-          <div className="dim">streak</div>
-          <div className="dim">best {best}</div>
-        </div>
-        <div className="panel">
-          <b>Up next</b>
-          <ol>
-            {nextUp.map((n, i) => (
-              <li key={i}>
-                {n.name}
-                {n.missed && (
-                  <>
-                    {' '}
-                    <span className="badge bad">missed</span>
-                  </>
-                )}
-              </li>
-            ))}
-          </ol>
-        </div>
-        <div className="panel dim">
-          {totals.linesDone} lines · {totals.ok}/{totals.tries} moves · {acc}% accuracy
-        </div>
-        <button onClick={endSession}>End session</button>
-        <button onClick={onExit}>Home</button>
-      </div>
-      {over && (
-        <div className="overlay">
-          <div className="card">
-            <h2>Session over</h2>
-            <p>
-              {totals.linesDone} lines · {totals.ok}/{totals.tries} moves · best streak{' '}
-              <b style={{ color: 'var(--gold)' }}>{best}</b>
-            </p>
-            <p className="dim">
-              {st.current.missedNames.size
-                ? 'Missed: ' + [...st.current.missedNames].join(', ')
-                : 'Nothing missed. Machine.'}
-            </p>
-            <button onClick={onExit}>Home</button>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   )
 }

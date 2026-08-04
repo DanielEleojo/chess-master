@@ -5,6 +5,7 @@ import type { Key } from 'chessground/types'
 import type { Line } from '../lib/pgn'
 import { USER, describeGame } from '../lib/sync'
 import { Board } from '../components/Board'
+import { ModeHead } from '../components/ModeHead'
 import { startEngine, type Engine } from '../lib/engine'
 import {
   ANALYSIS_V,
@@ -73,7 +74,11 @@ function CoachNote({ a, bl }: { a: GameAnalysis; bl: Blunder }) {
       <b>Coach on {bl.san}</b>
       <div style={{ marginTop: 4 }}>{prose ?? facts.join(' ')}</div>
       <div className="tiny dim" style={{ marginTop: 4 }}>
-        {waiting ? 'coach voice thinking…' : prose ? 'coach voice' : 'coach voice offline — facts only'}
+        {waiting
+          ? 'coach voice thinking…'
+          : prose
+            ? 'coach voice'
+            : 'coach voice offline — facts only'}
       </div>
     </div>
   )
@@ -187,7 +192,13 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
         ? [
             { orig: moves[p].from as Key, dest: moves[p].to as Key, brush: 'red' },
             ...(bl.best
-              ? [{ orig: bl.best.slice(0, 2) as Key, dest: bl.best.slice(2, 4) as Key, brush: 'green' }]
+              ? [
+                  {
+                    orig: bl.best.slice(0, 2) as Key,
+                    dest: bl.best.slice(2, 4) as Key,
+                    brush: 'green',
+                  },
+                ]
               : []),
           ]
         : [],
@@ -206,37 +217,42 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
 
   if (err && !sel)
     return (
-      <div className="analysis">
-        <div className="bad">{err}</div>
-        <button onClick={onExit}>Home</button>
-      </div>
+      <>
+        <ModeHead title="Game analysis" onExit={onExit} />
+        <div className="analysis">
+          <div className="bad">{err}</div>
+        </div>
+      </>
     )
 
   // ---- game list ----
   if (!sel)
     return (
-      <div className="analysis">
-        <div>
-          <h2>Game analysis</h2>
-          <div className="sub">
-            {games.length} games from your archives · pick one, the engine flags the damage
+      <>
+        <ModeHead
+          title="Game analysis"
+          sub={`${games.length} games from your archives · pick one, the engine flags the damage`}
+          onExit={onExit}
+          right={
+            unseen.size > 0 ? <span className="badge gold">{unseen.size} new</span> : undefined
+          }
+        />
+        <div className="analysis">
+          {!loaded && <div className="dim">loading archives…</div>}
+          <div className="gamelist">
+            {games.map((g) => (
+              <button key={g.uuid} className="gamerow" onClick={() => open(g)}>
+                <span className="when">{new Date(g.end_time * 1000).toLocaleDateString()}</span>
+                <span className="desc">
+                  {g.white.username.toLowerCase() === USER ? '⚪' : '⚫'} {describeGame(g)}
+                </span>
+                {unseen.has(g.uuid) && <span className="badge gold">new</span>}
+                {analyzed.has(g.uuid) && <span className="badge">✓ analyzed</span>}
+              </button>
+            ))}
           </div>
         </div>
-        {!loaded && <div className="dim">loading archives…</div>}
-        <div className="gamelist">
-          {games.map((g) => (
-            <button key={g.uuid} className="gamerow" onClick={() => open(g)}>
-              <span className="when">{new Date(g.end_time * 1000).toLocaleDateString()}</span>
-              <span className="desc">
-                {g.white.username.toLowerCase() === USER ? '⚪' : '⚫'} {describeGame(g)}
-              </span>
-              {unseen.has(g.uuid) && <span className="badge gold">new</span>}
-              {analyzed.has(g.uuid) && <span className="badge">✓ analyzed</span>}
-            </button>
-          ))}
-        </div>
-        <button onClick={onExit}>Home</button>
-      </div>
+      </>
     )
 
   // ---- one game ----
@@ -245,79 +261,84 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
   const blunderCount = analysis?.blunders.filter((b) => b.severity === 'blunder').length ?? 0
   const mistakeCount = (analysis?.blunders.length ?? 0) - blunderCount
   return (
-    <div className="analysis">
-      <div className="meta">
-        <button onClick={() => (setSel(null), setAnalysis(null))}>← games</button>
-        <b>{analysis?.desc ?? describeGame(sel)}</b>
-        <span className="dim">{new Date(sel.end_time * 1000).toLocaleDateString()}</span>
-      </div>
-      {progress && (
-        <div className="card">
-          <div className="sub">analyzing… {progress.done}/{progress.total} positions</div>
-          <div className="progress">
-            <div style={{ width: `${(100 * progress.done) / progress.total}%` }} />
-          </div>
+    <>
+      <ModeHead title="Game analysis" onExit={onExit} />
+      <div className="analysis">
+        <div className="meta">
+          <button onClick={() => (setSel(null), setAnalysis(null))}>← games</button>
+          <b>{analysis?.desc ?? describeGame(sel)}</b>
+          <span className="dim">{new Date(sel.end_time * 1000).toLocaleDateString()}</span>
         </div>
-      )}
-      {err && <div className="bad">{err}</div>}
-      {analysis && (
-        <div className="analview">
-          <div>
-            <Board size={430} onReady={(api) => (cg.current = api)} onMove={() => {}} />
-            <div className="sub" style={{ marginTop: 6 }}>
-              eval {fmtEval(analysis.evals[p] ?? 0)} · ← → or click a move
+        {progress && (
+          <div className="card">
+            <div className="sub">
+              analyzing… {progress.done}/{progress.total} positions
+            </div>
+            <div className="progress">
+              <div style={{ width: `${(100 * progress.done) / progress.total}%` }} />
             </div>
           </div>
-          <div className="side">
-            <div className="panel">
-              <div
-                className={analysis.book?.by === 'me' ? 'bl bad' : 'bl'}
-                onClick={() => analysis.book?.leftAtPly != null && setP(analysis.book.leftAtPly)}
-              >
-                {bookSentence(analysis.book)}
-              </div>
+        )}
+        {err && <div className="bad">{err}</div>}
+        {analysis && (
+          <div className="analview">
+            <div>
+              <Board size={430} onReady={(api) => (cg.current = api)} onMove={() => {}} />
               <div className="sub" style={{ marginTop: 6 }}>
-                {analysis.blunders.length === 0
-                  ? 'No swings flagged — clean game at this depth.'
-                  : `${blunderCount} blunder${blunderCount === 1 ? '' : 's'} · ${mistakeCount} mistake${mistakeCount === 1 ? '' : 's'} — click to jump:`}
+                eval {fmtEval(analysis.evals[p] ?? 0)} · ← → or click a move
               </div>
-              <ul className="misslist">
-                {analysis.blunders.map((b) => (
-                  <li key={b.ply} className="bl" onClick={() => setP(b.ply)}>
-                    move {Math.floor(b.ply / 2) + 1}: {b.san}
-                    {b.severity === 'blunder' ? '??' : '?'} — better {b.bestSan} (−
-                    {(b.swingCp / 100).toFixed(1)})
-                    {b.pvSan.length > 1 && (
-                      <span className="dim"> because {b.pvSan.join(' ')}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
             </div>
-            {blCur && <CoachNote a={analysis} bl={blCur} />}
-            <div className="panel movelist">
-              {moves.map((m, j) => {
-                const f = flagOf(j)
-                return (
-                  <span
-                    key={j}
-                    className={
-                      'mv' +
-                      (j + 1 === p ? ' cur' : '') +
-                      (f ? (f.severity === 'blunder' ? ' blunder' : ' mistake') : '')
-                    }
-                    onClick={() => setP(f ? j : j + 1)}
-                  >
-                    {m.color === 'w' ? `${j / 2 + 1}.` : ''}
-                    {m.san}
-                    {f ? (f.severity === 'blunder' ? '??' : '?') : ''}
-                  </span>
-                )
-              })}
+            <div className="side">
+              <div className="panel">
+                <div
+                  className={analysis.book?.by === 'me' ? 'bl bad' : 'bl'}
+                  onClick={() => analysis.book?.leftAtPly != null && setP(analysis.book.leftAtPly)}
+                >
+                  {bookSentence(analysis.book)}
+                </div>
+                <div className="sub" style={{ marginTop: 6 }}>
+                  {analysis.blunders.length === 0
+                    ? 'No swings flagged — clean game at this depth.'
+                    : `${blunderCount} blunder${blunderCount === 1 ? '' : 's'} · ${mistakeCount} mistake${mistakeCount === 1 ? '' : 's'} — click to jump:`}
+                </div>
+                <ul className="misslist">
+                  {analysis.blunders.map((b) => (
+                    <li key={b.ply} className="bl" onClick={() => setP(b.ply)}>
+                      move {Math.floor(b.ply / 2) + 1}: {b.san}
+                      {b.severity === 'blunder' ? '??' : '?'} — better {b.bestSan} (−
+                      {(b.swingCp / 100).toFixed(1)})
+                      {b.pvSan.length > 1 && (
+                        <span className="dim"> because {b.pvSan.join(' ')}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {blCur && <CoachNote a={analysis} bl={blCur} />}
+              <div className="panel movelist">
+                {moves.map((m, j) => {
+                  const f = flagOf(j)
+                  return (
+                    <span
+                      key={j}
+                      className={
+                        'mv' +
+                        (j + 1 === p ? ' cur' : '') +
+                        (f ? (f.severity === 'blunder' ? ' blunder' : ' mistake') : '')
+                      }
+                      onClick={() => setP(f ? j : j + 1)}
+                    >
+                      {m.color === 'w' ? `${j / 2 + 1}.` : ''}
+                      {m.san}
+                      {f ? (f.severity === 'blunder' ? '??' : '?') : ''}
+                    </span>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   )
 }

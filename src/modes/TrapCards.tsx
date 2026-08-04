@@ -3,6 +3,7 @@ import type { Api } from 'chessground/api'
 import type { Line } from '../lib/pgn'
 import { makeDrill, sanUpto, userMoveIdxs, type Drill } from '../lib/drill'
 import { Board, syncBoard } from '../components/Board'
+import { ModeHead } from '../components/ModeHead'
 import { beep, shake, useLater } from '../lib/fx'
 import { bump, byWeakness, saveHistory, type History } from '../lib/history'
 
@@ -22,7 +23,11 @@ export function buildDeck(traps: Line[]): Card[] {
     const commented = t.moves
       .map((m, j) => ({ m, j }))
       .filter(({ m }) => m.color === uc && t.comments[m.after])
-    const picks = commented.length ? commented : userMoveIdxs(t).slice(-1).map((j) => ({ m: t.moves[j], j }))
+    const picks = commented.length
+      ? commented
+      : userMoveIdxs(t)
+          .slice(-1)
+          .map((j) => ({ m: t.moves[j], j }))
     for (const { j } of picks) deck.push({ line: t, k: j, key: `${t.name}#${j}` })
   }
   return deck
@@ -49,7 +54,10 @@ export function TrapCards({
   )
   const [ci, setCi] = useState(0)
   const [, force] = useState(0) // dots repaint after result mutation
-  const [prompt, setPrompt] = useState<{ text: string; cls: string }>({ text: 'Your move.', cls: '' })
+  const [prompt, setPrompt] = useState<{ text: string; cls: string }>({
+    text: 'Your move.',
+    cls: '',
+  })
   const [coach, setCoach] = useState('')
   const [awaitNext, setAwaitNext] = useState(false) // teaching moment on screen — no timer, user advances
 
@@ -78,7 +86,8 @@ export function TrapCards({
   // missed card returns later in the same deal (005: misses requeue) until clean
   function next(idx: number) {
     const c = cards[idx]
-    if (c && c.result === 'bad') cards.push({ line: c.line, k: c.k, key: c.key, retry: true, result: null })
+    if (c && c.result === 'bad')
+      cards.push({ line: c.line, k: c.k, key: c.key, retry: true, result: null })
     show(idx + 1)
   }
 
@@ -154,7 +163,8 @@ export function TrapCards({
   }
 
   useEffect(() => {
-    ;(window as any).cmExpected = () => // dev hook, pairs with cmMove
+    ;(window as any).cmExpected = () =>
+      // dev hook, pairs with cmMove
       st.current.drill && !st.current.drill.done() ? st.current.drill.expected() : null
     show(0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,53 +175,69 @@ export function TrapCards({
   const originals = cards.filter((x) => !x.retry)
   const good = originals.filter((x) => x.result === 'good').length
   return (
-    <div className="cards">
-      <div>
-        <h2>Trap cards</h2>
-        <div className="sub">
-          the junk you actually face · one punishing move each · miss = see why, watch it play out
-          — it returns this deal
+    <>
+      <ModeHead
+        title="Trap cards"
+        sub="the junk you actually face · one punishing move each · a miss returns this deal"
+        onExit={onExit}
+        right={
+          <span className="badge">
+            {Math.min(ci + 1, cards.length)}/{cards.length}
+          </span>
+        }
+      />
+      <div className="cards">
+        <div className="dots">
+          {cards.map((x, i) => (
+            <span
+              key={i}
+              className={'dot' + (x.result ? ' ' + x.result : '') + (i === ci ? ' cur' : '')}
+            />
+          ))}
         </div>
+        {!done && c && (
+          <div className="card cardface">
+            <div className="meta">
+              <span className="badge">Trap</span> <b>{c.line.name}</b>{' '}
+              <span>you punish as {c.line.trainAs}</span>
+            </div>
+            <div className="sofar">{sanUpto(c.line, c.k)}</div>
+            <div ref={wrap}>
+              <Board size={400} onReady={(api) => (cg.current = api)} onMove={onMove} />
+            </div>
+            <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
+            <div className="coach">{coach}</div>
+            {awaitNext && (
+              <button className="primary" onClick={() => next(ci)}>
+                Next →
+              </button>
+            )}
+          </div>
+        )}
+        {done && (
+          <div className="card cardface">
+            <h2>
+              {good}/{originals.length}
+            </h2>
+            <div className="sub">
+              {good === originals.length
+                ? 'clean sweep — they walk into these, you collect'
+                : 'missed traps come back first next deal'}
+            </div>
+            <ul className="misslist">
+              {originals.map((x, i) => (
+                <li key={i}>
+                  {x.result === 'good' ? '✓' : '✗'} {x.line.name} — move {Math.floor(x.k / 2) + 1}{' '}
+                  as {x.line.trainAs}
+                </li>
+              ))}
+            </ul>
+            <button className="primary" onClick={onExit}>
+              Home
+            </button>
+          </div>
+        )}
       </div>
-      <div className="dots">
-        {cards.map((x, i) => (
-          <span key={i} className={'dot' + (x.result ? ' ' + x.result : '') + (i === ci ? ' cur' : '')} />
-        ))}
-      </div>
-      {!done && c && (
-        <div className="card cardface">
-          <div className="meta">
-            <span className="badge">Trap</span> <b>{c.line.name}</b>{' '}
-            <span>you punish as {c.line.trainAs}</span>
-          </div>
-          <div className="sofar">{sanUpto(c.line, c.k)}</div>
-          <div ref={wrap}>
-            <Board size={400} onReady={(api) => (cg.current = api)} onMove={onMove} />
-          </div>
-          <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
-          <div className="coach">{coach}</div>
-          {awaitNext && <button onClick={() => next(ci)}>Next →</button>}
-        </div>
-      )}
-      {done && (
-        <div className="card cardface">
-          <h2>
-            {good}/{originals.length}
-          </h2>
-          <div className="sub">
-            {good === originals.length ? 'clean sweep — they walk into these, you collect' : 'missed traps come back first next deal'}
-          </div>
-          <ul className="misslist">
-            {originals.map((x, i) => (
-              <li key={i}>
-                {x.result === 'good' ? '✓' : '✗'} {x.line.name} — move {Math.floor(x.k / 2) + 1} as{' '}
-                {x.line.trainAs}
-              </li>
-            ))}
-          </ul>
-          <button onClick={onExit}>Home</button>
-        </div>
-      )}
-    </div>
+    </>
   )
 }

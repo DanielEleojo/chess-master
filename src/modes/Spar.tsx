@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Chess } from 'chess.js'
 import type { Api } from 'chessground/api'
 import { Board, syncBoard } from '../components/Board'
+import { ModeHead } from '../components/ModeHead'
 import { startEngine, type Engine, type Weak } from '../lib/engine'
 import { beep } from '../lib/fx'
 import { sanUpto } from '../lib/drill'
@@ -14,11 +15,41 @@ import type { Line } from '../lib/pgn'
 // 002's MultiPV softmax is now the dial: search wide enough to *have* candidates,
 // then pick sloppily among them. `temp` (centipawns) is the sloppiness.
 export const RUNGS: (Weak & { name: string; blurb: string })[] = [
-  { name: 'Careless', nodes: 500, multipv: 8, temp: 900, blurb: 'hangs pieces for free — the floor' },
-  { name: 'Rookie', nodes: 500, multipv: 6, temp: 350, blurb: 'blunders often, misses your threats' },
-  { name: 'Beginner', nodes: 800, multipv: 4, temp: 140, blurb: 'takes what you leave hanging, no plan' },
-  { name: 'Improver', nodes: 4000, multipv: 3, temp: 55, blurb: 'punishes loose pieces, spots short tactics' },
-  { name: 'Club player', nodes: 40000, multipv: 1, temp: 0, blurb: 'always its best move — you need a real idea' },
+  {
+    name: 'Careless',
+    nodes: 500,
+    multipv: 8,
+    temp: 900,
+    blurb: 'hangs pieces for free — the floor',
+  },
+  {
+    name: 'Rookie',
+    nodes: 500,
+    multipv: 6,
+    temp: 350,
+    blurb: 'blunders often, misses your threats',
+  },
+  {
+    name: 'Beginner',
+    nodes: 800,
+    multipv: 4,
+    temp: 140,
+    blurb: 'takes what you leave hanging, no plan',
+  },
+  {
+    name: 'Improver',
+    nodes: 4000,
+    multipv: 3,
+    temp: 55,
+    blurb: 'punishes loose pieces, spots short tactics',
+  },
+  {
+    name: 'Club player',
+    nodes: 40000,
+    multipv: 1,
+    temp: 0,
+    blurb: 'always its best move — you need a real idea',
+  },
 ]
 
 // Round 4 (Daniel): one win is luck, two is a level. The climb knob.
@@ -126,7 +157,11 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     s.thinking = false
     if (uci) {
       // ponytail: auto-queen, same as the drill — underpromotion never comes up here
-      const mv = s.chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' })
+      const mv = s.chess.move({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+        promotion: uci[4] ?? 'q',
+      })
       bill()
       s.lm = [mv.from, mv.to]
       beep(false)
@@ -157,7 +192,15 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     const s = st.current
     const line = lineIdx >= 0 ? lines[lineIdx] : null
     s.id++
-    s.my = line ? (line.trainAs === 'White' ? 'w' : 'b') : pick === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : pick
+    s.my = line
+      ? line.trainAs === 'White'
+        ? 'w'
+        : 'b'
+      : pick === 'r'
+        ? Math.random() < 0.5
+          ? 'w'
+          : 'b'
+        : pick
     s.chess = new Chess()
     for (const m of line?.moves ?? []) s.chess.move(m.san)
     const last = line?.moves[line.moves.length - 1]
@@ -191,76 +234,83 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
 
   if (!playing)
     return (
-      <div className="cards">
-        <div className="card cardface" style={{ maxWidth: 560, textAlign: 'left' }}>
-          <h2>Sparring</h2>
-          <div className="sub">
-            Rough take (ticket 014) — play a few, then tell me which rungs are worth keeping.
-          </div>
-          <div className="panel" style={{ marginTop: 14 }}>
-            <b>How strong?</b>
-            {RUNGS.map((r, i) => (
-              <button
-                key={r.name}
-                disabled={i < rung}
-                style={{ display: 'block', width: '100%', textAlign: 'left', marginTop: 6 }}
-                onClick={() => jumpTo(i)}
-              >
-                {i === rung ? '● ' : i < rung ? '✓ ' : '○ '}
-                <b>{r.name}</b> — {i < rung ? 'beaten — retired' : r.blurb}{' '}
-                <span className="tiny dim">({knobs(r)})</span>
-                {i === rung && wins > 0 && (
-                  <span className="badge gold">
-                    {' '}
-                    {wins}/{WINS_TO_CLIMB}
+      <>
+        <ModeHead
+          title="Sparring"
+          sub="the ladder only goes up — beat a rung twice and it retires for good"
+          onExit={onExit}
+          right={
+            <span className="badge gold">
+              {RUNGS[rung].name} · {wins}/{WINS_TO_CLIMB}
+            </span>
+          }
+        />
+        <div className="cards">
+          <div className="cardface" style={{ maxWidth: 560, textAlign: 'left', width: '100%' }}>
+            <div className="panel" style={{ width: '100%' }}>
+              <b>How strong?</b>
+              {RUNGS.map((r, i) => (
+                <button
+                  key={r.name}
+                  disabled={i < rung}
+                  className={'rung' + (i === rung ? ' on' : i < rung ? ' beaten' : '')}
+                  onClick={() => jumpTo(i)}
+                >
+                  <span className="rname">
+                    {i === rung ? '● ' : i < rung ? '✓ ' : '○ '}
+                    {r.name}
                   </span>
-                )}
-              </button>
-            ))}
-            <div className="tiny dim" style={{ marginTop: 8 }}>
-              {WINS_TO_CLIMB} wins retires a rung for good — the ladder only goes up. Jump ahead
-              whenever you like; there's no way back down, and jumping resets the count.
-            </div>
-          </div>
-          <div className="panel" style={{ marginTop: 12 }}>
-            <b>Start from</b>
-            <select
-              style={{ display: 'block', width: '100%', marginTop: 6 }}
-              value={lineIdx}
-              onChange={(e) => setLineIdx(+e.target.value)}
-            >
-              <option value={-1}>Fresh game</option>
-              {lines.map((l) => (
-                <option key={l.idx} value={l.idx}>
-                  {l.system}: {l.name} (you are {l.trainAs})
-                </option>
+                  {i === rung && wins > 0 && (
+                    <span className="badge gold" style={{ marginLeft: 8 }}>
+                      {wins}/{WINS_TO_CLIMB}
+                    </span>
+                  )}
+                  <div className="rknobs">
+                    {i < rung ? 'beaten — retired' : r.blurb} · {knobs(r)}
+                  </div>
+                </button>
               ))}
-            </select>
-            {lineIdx < 0 ? (
-              <div style={{ marginTop: 8 }}>
-                {(['w', 'b', 'r'] as const).map((c) => (
-                  <button key={c} onClick={() => setPick(c)}>
-                    {c === pick ? '● ' : '○ '}
-                    {c === 'w' ? 'White' : c === 'b' ? 'Black' : 'Random'}
-                  </button>
+              <div className="tiny" style={{ marginTop: 10 }}>
+                The low rungs play sloppily on purpose — they see the good move and pick a worse
+                one. Jumping ahead is allowed; there is no way back down, and a jump resets the
+                count.
+              </div>
+            </div>
+            <div className="panel" style={{ width: '100%' }}>
+              <b>Start from</b>
+              <select
+                style={{ display: 'block', width: '100%' }}
+                value={lineIdx}
+                onChange={(e) => setLineIdx(+e.target.value)}
+              >
+                <option value={-1}>Fresh game</option>
+                {lines.map((l) => (
+                  <option key={l.idx} value={l.idx}>
+                    {l.system}: {l.name} (you are {l.trainAs})
+                  </option>
                 ))}
-              </div>
-            ) : (
-              <div className="tiny dim" style={{ marginTop: 8 }}>
-                the line gets played out first — you spar on from where the book ends
-              </div>
-            )}
-          </div>
-          <div className="tiny dim" style={{ marginTop: 12 }}>
-            The bottom rungs play sloppily on purpose — they see the good move and pick a worse
-            one. That's what makes a win possible; the ratchet is what stops it becoming a habit.
-            Say if it climbs too fast, or not fast enough.
-          </div>
-          <div style={{ marginTop: 14 }}>
-            <button onClick={() => setPlaying(true)}>Play</button> <button onClick={onExit}>Home</button>
+              </select>
+              {lineIdx < 0 ? (
+                <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                  {(['w', 'b', 'r'] as const).map((c) => (
+                    <button key={c} onClick={() => setPick(c)}>
+                      {c === pick ? '● ' : '○ '}
+                      {c === 'w' ? 'White' : c === 'b' ? 'Black' : 'Random'}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="tiny" style={{ marginTop: 8 }}>
+                  the line gets played out first — you spar on from where the book ends
+                </div>
+              )}
+            </div>
+            <button className="primary" onClick={() => setPlaying(true)}>
+              Play {RUNGS[rung].name} →
+            </button>
           </div>
         </div>
-      </div>
+      </>
     )
 
   const s = st.current
@@ -270,58 +320,71 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
   if (live) el[s.chess.turn()] += running
   const hist = s.chess.history()
   return (
-    <div className="drill">
-      <div>
-        <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
-        <div className="linetag">
-          <span className="badge">{RUNGS[rung].name}</span>{' '}
-          <span className="badge">you are {s.my === 'w' ? 'White' : 'Black'}</span>{' '}
-          {s.book && <span className="tiny dim">from {s.book}</span>}
-        </div>
-        <div className={'prompt ' + (s.over ? (s.over.includes('You won') ? 'good' : 'bad') : '')}>
-          {s.over || (s.thinking ? 'thinking…' : 'Your move.')}
-        </div>
-      </div>
-      <div className="side">
-        <div className="panel">
-          <b>Strength</b>
-          <select
-            style={{ display: 'block', width: '100%', marginTop: 6 }}
-            value={rung}
-            onChange={(e) => jumpTo(+e.target.value)}
+    <>
+      <ModeHead
+        title="Sparring"
+        sub={s.book ? `from ${s.book}` : 'fresh game'}
+        onExit={onExit}
+        right={
+          <span className="badge gold">
+            {RUNGS[rung].name} · {wins}/{WINS_TO_CLIMB}
+          </span>
+        }
+      />
+      <div className="drill">
+        <div>
+          <Board size={470} onReady={(api) => (cg.current = api)} onMove={onMove} />
+          <div className="linetag">
+            <span className="badge">you are {s.my === 'w' ? 'White' : 'Black'}</span>
+          </div>
+          <div
+            className={'prompt ' + (s.over ? (s.over.includes('You won') ? 'good' : 'bad') : '')}
           >
-            {RUNGS.map((r, i) => (
-              <option key={r.name} value={i} disabled={i < rung}>
-                {r.name} — {knobs(r)}
-              </option>
-            ))}
-          </select>
-          <div className="tiny dim" style={{ marginTop: 6 }}>
-            {wins}/{WINS_TO_CLIMB} wins here — up only, mid-game included
+            {s.over || (s.thinking ? 'thinking…' : 'Your move.')}
           </div>
         </div>
-        <div className="panel">
-          <b>Elapsed</b>
-          <div>
-            you {mmss(el[s.my])} · engine {mmss(el[s.my === 'w' ? 'b' : 'w'])}
+        <div className="side">
+          <div className="panel">
+            <b>Strength</b>
+            <select
+              style={{ display: 'block', width: '100%', marginTop: 6 }}
+              value={rung}
+              onChange={(e) => jumpTo(+e.target.value)}
+            >
+              {RUNGS.map((r, i) => (
+                <option key={r.name} value={i} disabled={i < rung}>
+                  {r.name} — {knobs(r)}
+                </option>
+              ))}
+            </select>
+            <div className="tiny dim" style={{ marginTop: 6 }}>
+              {wins}/{WINS_TO_CLIMB} wins here — up only, mid-game included
+            </div>
           </div>
-          <div className="tiny dim">no clock, nothing flags — say if you want one</div>
-        </div>
-        <div className="panel">
-          <div className="movelist">
-            {hist.map((m, i) => (
-              <span key={i} className="mv">
-                {i % 2 === 0 && <span className="dim">{i / 2 + 1}.</span>} {m}
-              </span>
-            ))}
+          <div className="panel">
+            <b>Elapsed</b>
+            <div>
+              you {mmss(el[s.my])} · engine {mmss(el[s.my === 'w' ? 'b' : 'w'])}
+            </div>
+            <div className="tiny dim">no clock, nothing flags — say if you want one</div>
           </div>
+          {hist.length > 0 && (
+            <div className="panel">
+              <div className="movelist">
+                {hist.map((m, i) => (
+                  <span key={i} className="mv">
+                    {i % 2 === 0 && <span className="dim">{i / 2 + 1}.</span>} {m}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {live && <button onClick={() => ((s.over = 'You resigned.'), repaint())}>Resign</button>}
+          <button className={live ? '' : 'primary'} onClick={() => setPlaying(false)}>
+            New game
+          </button>
         </div>
-        {live && (
-          <button onClick={() => ((s.over = 'You resigned.'), repaint())}>Resign</button>
-        )}
-        <button onClick={() => setPlaying(false)}>New game</button>
-        <button onClick={onExit}>Home</button>
       </div>
-    </div>
+    </>
   )
 }

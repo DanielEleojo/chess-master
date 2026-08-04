@@ -9,7 +9,7 @@ import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
 import { Puzzles } from './modes/Puzzles'
 import { Analysis } from './modes/Analysis'
-import { Spar } from './modes/Spar'
+import { Spar, RUNGS } from './modes/Spar'
 import { Selftest } from './modes/Selftest'
 
 type Mode = 'home' | 'lines' | 'traps' | 'puzzles' | 'analysis' | 'spar' | 'selftest'
@@ -23,7 +23,11 @@ function LastSynced({ at }: { at: number }) {
     return () => clearInterval(t)
   }, [])
   if (!at) return <div className="tiny dim">syncing…</div>
-  return <div className="tiny dim">last synced {Math.max(0, Math.round((Date.now() - at) / 1000))}s ago</div>
+  return (
+    <div className="tiny dim">
+      last synced {Math.max(0, Math.round((Date.now() - at) / 1000))}s ago
+    </div>
+  )
 }
 
 export default function App() {
@@ -42,6 +46,8 @@ export default function App() {
   const [ownOnly, setOwnOnly] = useState(false) // coach deep-link: tactics deals his blunders only
   const [tactics, setTactics] = useState<PCard[]>([])
   const [own, setOwn] = useState<PCard[]>([])
+  const [analysedN, setAnalysedN] = useState(0)
+  const [rung, setRung] = useState(0) // sparring ladder, see Spar.tsx — localStorage
   const toastId = useRef(0)
 
   // home-card "N new" count and his own tactics cards — both refreshed each time
@@ -52,7 +58,12 @@ export default function App() {
       .then((r) => (r.ok ? r.json() : {}))
       .then((s: { unseen?: string[] }) => setUnseenN(s.unseen?.length ?? 0))
       .catch(() => {})
-    loadAnalyses().then((s) => setOwn(ownCards(Object.values(s.games))))
+    loadAnalyses().then((s) => {
+      const games = Object.values(s.games)
+      setOwn(ownCards(games))
+      setAnalysedN(games.length)
+    })
+    setRung(+(localStorage.getItem('cm.rung') ?? 0) || 0)
   }, [mode])
 
   useEffect(
@@ -88,7 +99,9 @@ export default function App() {
 
   if (state === 'loading') return <div className="center dim">loading seeds…</div>
   if (state === 'error')
-    return <div className="center bad">Couldn't load data/*.pgn — is this running via npm run dev?</div>
+    return (
+      <div className="center bad">Couldn't load data/*.pgn — is this running via npm run dev?</div>
+    )
 
   const h = historyRef.current
   const go = (m: Mode, focusLine?: string, only?: boolean) => {
@@ -121,7 +134,13 @@ export default function App() {
 
   if (mode === 'lines')
     return wrap(
-      <LineDrill key={dealNo} lines={lines} history={h} focus={focus} onExit={() => setMode('home')} />,
+      <LineDrill
+        key={dealNo}
+        lines={lines}
+        history={h}
+        focus={focus}
+        onExit={() => setMode('home')}
+      />,
     )
   if (mode === 'traps')
     return wrap(<TrapCards key={dealNo} traps={traps} history={h} onExit={() => setMode('home')} />)
@@ -138,7 +157,8 @@ export default function App() {
     )
   if (mode === 'analysis')
     return wrap(<Analysis key={dealNo} lines={lines} onExit={() => setMode('home')} />)
-  if (mode === 'spar') return wrap(<Spar key={dealNo} lines={lines} onExit={() => setMode('home')} />)
+  if (mode === 'spar')
+    return wrap(<Spar key={dealNo} lines={lines} onExit={() => setMode('home')} />)
   if (mode === 'selftest') return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} />)
 
   const lineStats = Object.values(h.lines)
@@ -161,22 +181,28 @@ export default function App() {
           <div className="sub">
             {lines.length} repertoire lines · endless streak · misses come back
           </div>
-          {drilled > 0 && (
-            <div className="sub dim">
-              {drilled} drilled · {Math.round((clean / drilled) * 100)}% clean
-            </div>
-          )}
+          <div className="stat">
+            {drilled > 0 ? (
+              <>
+                <b>{drilled}</b> drilled · <b>{Math.round((clean / drilled) * 100)}%</b> clean
+              </>
+            ) : (
+              'not drilled yet'
+            )}
+          </div>
         </button>
         <button className="modecard" onClick={() => go('traps')}>
           <h2>Trap cards</h2>
-          <div className="sub">
-            {buildDeck(traps).length} punish-the-junk cards · 10 per deal
+          <div className="sub">{buildDeck(traps).length} punish-the-junk cards · 10 per deal</div>
+          <div className="stat">
+            {dealt > 0 ? (
+              <>
+                <b>{dealt}</b> dealt · <b>{Math.round((firstTry / dealt) * 100)}%</b> first try
+              </>
+            ) : (
+              'not dealt yet'
+            )}
           </div>
-          {dealt > 0 && (
-            <div className="sub dim">
-              {dealt} dealt · {Math.round((firstTry / dealt) * 100)}% first try
-            </div>
-          )}
         </button>
         <button className="modecard" onClick={() => go('puzzles')}>
           <h2>Tactics</h2>
@@ -184,34 +210,42 @@ export default function App() {
             {own.length > 0 && <>your {own.length} flagged positions · </>}
             {tactics.length} puzzles from your openings · 10 per deal
           </div>
-          {puzzled > 0 && (
-            <div className="sub dim">
-              {puzzled} solved · {Math.round((puzFirst / puzzled) * 100)}% first try
-            </div>
-          )}
+          <div className="stat">
+            {puzzled > 0 ? (
+              <>
+                <b>{puzzled}</b> solved · <b>{Math.round((puzFirst / puzzled) * 100)}%</b> first try
+              </>
+            ) : (
+              'not solved yet'
+            )}
+          </div>
         </button>
         <button className="modecard" onClick={() => go('analysis')}>
           <h2>
-            Game analysis{' '}
+            Game analysis
             {unseenN > 0 && <span className="badge gold">{unseenN} new</span>}
           </h2>
-          <div className="sub">
-            engine-checks your real games · blunders + where you left book
+          <div className="sub">engine-checks your real games · blunders + where you left book</div>
+          <div className="stat">
+            <b>{analysedN}</b> analysed
           </div>
         </button>
-        <button className="modecard" onClick={() => go('spar')}>
+        <button className="modecard wide" onClick={() => go('spar')}>
           <h2>
-            Sparring <span className="badge">rough</span>
+            Sparring <span className="badge gold">{RUNGS[rung].name}</span>
           </h2>
           <div className="sub">
             play a weakened Stockfish · fresh game or on from a repertoire line
           </div>
+          <div className="stat">beat it twice and the rung retires — the ladder only goes up</div>
         </button>
       </div>
-      <a className="tiny" href="?selftest=1">
-        selftest
-      </a>
-      <LastSynced at={syncedAt} />
+      <div className="homefoot">
+        <LastSynced at={syncedAt} />
+        <a className="tiny" href="?selftest=1">
+          selftest
+        </a>
+      </div>
     </div>,
   )
 }
