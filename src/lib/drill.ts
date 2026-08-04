@@ -53,10 +53,11 @@ export function makeDrill(line: Line, start = 0): Drill {
       try {
         mv = chess.move({ from, to })
       } catch {
-        // ponytail: auto-queen instead of a promotion picker — no seed line or trap
-        // reaches promotion; build the picker when puzzle data does.
+        // ponytail: auto-promote to whatever the expected move promotes to (queen
+        // if this isn't a promotion at all) instead of a picker UI — a from/to that
+        // needs a promotion hint can only be "right" as the line's own piece.
         try {
-          mv = chess.move({ from, to, promotion: 'q' })
+          mv = chess.move({ from, to, promotion: exp.promotion ?? 'q' })
         } catch {
           return { ok: false, exp, got: null }
         }

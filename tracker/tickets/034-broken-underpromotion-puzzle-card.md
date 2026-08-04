@@ -1,8 +1,8 @@
 ---
 title: Tactics card p:Oezqb doesn't walk its own solution
 type: task
-status: open
-assignee:
+status: closed
+assignee: claude
 blocked-by: []
 ---
 
