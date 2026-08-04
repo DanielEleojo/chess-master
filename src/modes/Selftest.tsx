@@ -5,7 +5,7 @@ import { applyExtension, tailGrace } from '../lib/extend'
 import { makeDrill, userMoveIdxs } from '../lib/drill'
 import { buildDeck } from './TrapCards'
 import { bump, type Stat } from '../lib/history'
-import { USER, describeGame, gameParts, monthKey, newGames, type Game } from '../lib/sync'
+import { USER, describeGame, gameParts, monthKey, newGames, setUser, type Game } from '../lib/sync'
 import { SPAR_TC, bookWalk, flagMoves, sparGame } from '../lib/analyze'
 import { softmaxPick, startEngine } from '../lib/engine'
 import { RUNGS } from './Spar'
@@ -257,12 +257,18 @@ export function Selftest({
       white: { username: 'BabaDaniel', result: 'win', rating },
       black: { username: 'o', result: 'resigned' },
     })
+    // ratingHistory matches against the live USER — 028: on a fresh load this
+    // races App's own account resolution, so pin it for these fixtures and
+    // put it back rather than depend on that resolution having finished.
+    const wasUser = USER
+    setUser('babadaniel')
     const rh = ratingHistory([gr(3, 344), gr(1, 300), gr(2, 320), gr(1, 100, 'bullet'), { ...gr(4, 999), rated: false }])
     ok('coach: rating history per class, sorted, rated only', rh.rapid?.length === 3 && rh.rapid[2].rating === 344 && rh.bullet?.length === 1)
     const m = milestone(rh)!
     ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
     ok('coach: trend measured against earlier games', m.trend === 44)
     ok('coach: no games, no milestone', milestone({}) === null)
+    setUser(wasUser)
 
     // tactics deck (ticket 013) — fen-rooted cards walked by the shared drill engine
     ok(`tactics deck loaded: ${tactics.length} cards (expect >= 300)`, tactics.length >= 300)

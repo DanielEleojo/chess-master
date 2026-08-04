@@ -59,10 +59,14 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Author the Learn content](tickets/031-author-learn-content.md) — `data/learn.json` written: three system briefs plus a fuller take on all 105 commented moves in `repertoire.pgn`, keyed by system name and by line-name + move-number-qualified SAN (plain SAN alone collides once, in the vs-Petrov line); `scripts/validate-learn.mjs` (Node + chess.js) checks every commented move has an entry and every entry points at a real move. `repertoire.pgn` untouched.
 - [Build the Learn mode + wire per-move detail into Line Drill](tickets/032-build-learn-mode.md) — a new Home tile opens a system picker into text-only Plans/Pawn breaks/Key squares briefs (`.panel` chrome, no board), and Line Drill shows the longer learn text in an always-visible `.learnnote` beside the existing why-comment on every attempt, hit or miss. `data/learn.json` relocated to `public/data/learn.json` — static and account-independent like `traps.pgn`/`puzzles.json`, not per-account like `repertoire.pgn`.
 
+- [Fact-grounded coach Q&A](tickets/027-coach-followup-qa.md) — a fixed two-button menu ("what if I played X?" / "what's the idea here?") appended to Analysis' `CoachNote`, no free text; "what if" makes the board interactive and reuses `computeFacts` on the clicked hypothetical, "idea" re-prompts over the same already-computed facts (no new fact-layer vocabulary) and hides when there's only the generic fallback to reframe. Analysis only, not Line Drill.
+- [Build fact-grounded coach Q&A](tickets/033-build-coach-followup-qa.md) — 027 shipped: "what if" toggles the board interactive and mirrors LineDrill's `explainMiss` eval-both-lines pattern per click (fresh from the flagged position each time, not cumulative); "idea" adds a `framing` param to `coachSay` reusing the same facts. Verified live on a real flagged move both ways; reframing is honest about leaning on "why X fails" content when that's most of what facts.ts has for a position.
+
+- [Selftest crashes on direct load — renders before data arrives](tickets/028-selftest-crash-on-load.md) — the `lines`/`traps` race this ticket originally named was already closed by ticket 011's loading gate; live re-diagnosis found the real live crash is a *different* race added later by 018/024 — `ratingHistory()`'s fixtures match against the module-level `USER`, unset until `App`'s async `resolveChessUsername()` resolves. `Selftest.tsx` now pins and restores `USER` around that one block instead of depending on load order; `main.tsx` also gained a small `ErrorBoundary` around `<App/>` so no future crash anywhere can blank the whole app again.
+
 ## Not yet specified
 
-- [027](tickets/027-coach-followup-qa.md) — fact-grounded coach Q&A design. Open, unassigned, unblocked, lower priority.
-- [028](tickets/028-selftest-crash-on-load.md) — `?selftest=1` blanks the app; renders before data loads, no error boundary. Discovered verifying 024, unrelated to it. Open, unassigned, unblocked.
+- [034](tickets/034-broken-underpromotion-puzzle-card.md) — tactics card `p:Oezqb`'s solution includes an underpromotion (`f2f1n`) that the puzzle-card walk can't complete; likely lost in the UCI→SAN conversion. Surfaced verifying 028, unrelated to it. Open, unassigned, unblocked.
 
 ## Out of scope
 
