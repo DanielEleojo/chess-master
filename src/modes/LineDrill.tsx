@@ -38,10 +38,12 @@ const PIECE: Record<string, string> = {
 export function LineDrill({
   lines,
   history,
+  focus,
   onExit,
 }: {
   lines: Line[]
   history: History
+  focus?: string // coach deep-link (018): deal this line first
   onExit: () => void
 }) {
   const [cur, setCur] = useState<Line | null>(null)
@@ -90,7 +92,11 @@ export function LineDrill({
 
   function nextLine() {
     const s = st.current
-    if (!s.queue.length) s.queue = byWeakness(lines, (l) => l.name, history.lines).map((l) => l.idx)
+    if (!s.queue.length) {
+      s.queue = byWeakness(lines, (l) => l.name, history.lines).map((l) => l.idx)
+      const f = focus ? lines.find((l) => l.name === focus)?.idx : undefined
+      if (f !== undefined) s.queue = [f, ...s.queue.filter((i) => i !== f)]
+    }
     s.curIdx = s.queue.shift()!
     const line = lines[s.curIdx]
     s.drill = makeDrill(line)

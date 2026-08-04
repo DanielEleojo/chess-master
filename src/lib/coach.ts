@@ -9,13 +9,36 @@ export const MODEL = 'qwen2.5:7b-instruct'
 const cache = new Map<string, string>()
 
 export async function coachSay(key: string, context: string, facts: string[]): Promise<string | null> {
-  const hit = cache.get(key)
-  if (hit) return hit
-  const prompt = `You are a friendly chess coach talking to an adult beginner rated about 800.
+  return generate(
+    key,
+    `You are a friendly chess coach talking to an adult beginner rated about 800.
 ${context}
 Verified facts (computed by the engine — the only truth you may use):
 ${facts.map((f) => '- ' + f).join('\n')}
-In 2-3 short sentences, explain why his move fails and why the better move works. Use only these facts — never invent moves, squares or tactics. No lists, no headers, plain words.`
+In 2-3 short sentences, explain why his move fails and why the better move works. Use only these facts — never invent moves, squares or tactics. No lists, no headers, plain words.`,
+  )
+}
+
+// "Coach says" card (018): phrase the recommender's pick against the milestone.
+export async function coachPitch(
+  key: string,
+  milestoneLine: string,
+  pick: { title: string; evidence: string[] },
+): Promise<string | null> {
+  return generate(
+    key,
+    `You are a friendly chess coach talking to an adult beginner.
+${milestoneLine}
+The training plan (already decided by the trainer, not by you): ${pick.title}.
+Evidence from his own games and drills:
+${pick.evidence.map((f) => '- ' + f).join('\n')}
+In 2 short sentences, tell him this is what to work on right now and how it is costing him points toward that next milestone. Use only these facts — never invent games, moves or numbers. Plain words, no lists.`,
+  )
+}
+
+async function generate(key: string, prompt: string): Promise<string | null> {
+  const hit = cache.get(key)
+  if (hit) return hit
   try {
     const r = await fetch(OLLAMA + '/api/generate', {
       method: 'POST',

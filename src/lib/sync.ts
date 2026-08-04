@@ -7,8 +7,10 @@ export const USER = 'babadaniel'
 export interface Game {
   uuid: string
   time_class: string
-  white: { username: string; result: string }
-  black: { username: string; result: string }
+  rated?: boolean
+  end_time?: number
+  white: { username: string; result: string; rating?: number }
+  black: { username: string; result: string; rating?: number }
   [k: string]: unknown
 }
 

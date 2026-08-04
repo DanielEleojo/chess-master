@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { parseGames, type Line } from './lib/pgn'
 import { emptyHistory, loadHistory, type History } from './lib/history'
 import { startSync } from './lib/sync'
+import { CoachCard } from './components/CoachCard'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
 import { Analysis } from './modes/Analysis'
@@ -33,6 +34,7 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [syncedAt, setSyncedAt] = useState(0)
   const [unseenN, setUnseenN] = useState(0)
+  const [focus, setFocus] = useState<string | undefined>() // coach deep-link: drill this line first
   const toastId = useRef(0)
 
   // home-card "N new" count — refreshed each time we land on home
@@ -78,7 +80,8 @@ export default function App() {
     return <div className="center bad">Couldn't load data/*.pgn — is this running via npm run dev?</div>
 
   const h = historyRef.current
-  const go = (m: Mode) => {
+  const go = (m: Mode, focusLine?: string) => {
+    setFocus(focusLine)
     setDealNo((n) => n + 1)
     setMode(m)
   }
@@ -105,7 +108,9 @@ export default function App() {
   )
 
   if (mode === 'lines')
-    return wrap(<LineDrill key={dealNo} lines={lines} history={h} onExit={() => setMode('home')} />)
+    return wrap(
+      <LineDrill key={dealNo} lines={lines} history={h} focus={focus} onExit={() => setMode('home')} />,
+    )
   if (mode === 'traps')
     return wrap(<TrapCards key={dealNo} traps={traps} history={h} onExit={() => setMode('home')} />)
   if (mode === 'analysis')
@@ -122,6 +127,7 @@ export default function App() {
     <div className="home">
       <h1>Chess Master</h1>
       <div className="sub">openings first — the rest hangs off this</div>
+      <CoachCard history={h} unseen={unseenN} onGo={go} />
       <div className="modes">
         <button className="modecard" onClick={() => go('lines')}>
           <h2>Line drill</h2>

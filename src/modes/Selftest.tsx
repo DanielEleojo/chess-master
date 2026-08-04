@@ -9,6 +9,9 @@ import { bookWalk, flagMoves } from '../lib/analyze'
 import { startEngine } from '../lib/engine'
 import { computeFacts } from '../lib/facts'
 import { MODEL, coachUp } from '../lib/coach'
+import type { Analysis } from '../lib/analyze'
+import { emptyHistory } from '../lib/history'
+import { CLUSTER_MIN, milestone, pickNext, ratingHistory } from '../lib/recommend'
 
 // Ported from the prototype's ?selftest=1 — same logic checks, now against the
 // fetched real seed files, plus a middleware round-trip. The app's one check.
@@ -140,6 +143,37 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     ok('facts: best-line material win reported', fBest.some((s) => s.includes('exd5 wins a pawn')))
     const fQuiet = computeFacts({ fen: new Chess().fen(), played: 'a3', best: 'e4', bestLine: ['e4'], punishLine: ['e5'], swingCp: 60 })
     ok('facts: quiet miss falls back to positional', fQuiet.length === 1 && fQuiet[0].includes('positional'))
+
+    // coach recommender (ticket 018) — deterministic ladder + milestone ladder
+    const mkA = (over: Partial<Analysis>): Analysis => ({
+      uuid: 'u', at: '', v: 3, ms: 300, color: 'w', desc: '', endTime: 0, evals: [], blunders: [], book: null, ...over,
+    })
+    const leftBook = (line: string): Analysis =>
+      mkA({ book: { line, matchedPlies: 4, leftAtPly: 4, by: 'me', expectedSan: 'Bc4' } })
+    const blunderAt = (ply: number): Analysis =>
+      mkA({ blunders: [{ ply, san: '', fen: '', best: '', bestSan: '', pvSan: [], punishSan: [], swingCp: 300, severity: 'blunder' }] })
+    ok('coach: unseen games top the ladder', pickNext(3, [leftBook('X'), leftBook('X')], emptyHistory()).kind === 'new-games')
+    const pLeft = pickNext(0, [leftBook('X'), leftBook('X'), blunderAt(20), blunderAt(25), blunderAt(30)], emptyHistory())
+    ok('coach: repeated left line beats blunder cluster, deep-links the line', pLeft.kind === 'left-line' && pLeft.focusLine === 'X' && pLeft.mode === 'lines')
+    ok('coach: one departure is not a weakness', pickNext(0, [leftBook('X')], emptyHistory()).kind !== 'left-line')
+    const pClu = pickNext(0, [blunderAt(20), blunderAt(25), blunderAt(30)], emptyHistory())
+    ok(`coach: ${CLUSTER_MIN} same-phase blunders called as a cluster`, pClu.kind === 'blunder-cluster' && pClu.evidence[0].includes('middlegame'))
+    const wh = emptyHistory()
+    wh.lines['Italian main line'] = { seen: 6, missed: 4 }
+    const pWeak = pickNext(0, [], wh)
+    ok('coach: weak drill stat picked with evidence', pWeak.kind === 'weak-drill' && pWeak.focusLine === 'Italian main line' && pWeak.evidence[0].includes('4 of 6'))
+    ok('coach: clean data falls back to default reps', pickNext(0, [], emptyHistory()).kind === 'default')
+    const gr = (t: number, rating: number, tc = 'rapid'): Game => ({
+      uuid: String(t), time_class: tc, rated: true, end_time: t,
+      white: { username: 'BabaDaniel', result: 'win', rating },
+      black: { username: 'o', result: 'resigned' },
+    })
+    const rh = ratingHistory([gr(3, 344), gr(1, 300), gr(2, 320), gr(1, 100, 'bullet'), { ...gr(4, 999), rated: false }])
+    ok('coach: rating history per class, sorted, rated only', rh.rapid?.length === 3 && rh.rapid[2].rating === 344 && rh.bullet?.length === 1)
+    const m = milestone(rh)!
+    ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
+    ok('coach: trend measured against earlier games', m.trend === 44)
+    ok('coach: no games, no milestone', milestone({}) === null)
 
     setOut(res)
     ;(async () => {

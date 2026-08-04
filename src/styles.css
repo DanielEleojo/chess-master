@@ -152,6 +152,46 @@ pre {
   text-decoration: none;
 }
 
+/* coach says card (018) */
+.coachcard {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 24px auto 0;
+  max-width: 640px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.coachhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.coachprose {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.coachwhy {
+  margin: 0;
+  padding-left: 18px;
+}
+.coachgo {
+  align-self: flex-start;
+  background: var(--gold);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* line drill (prototype .vB) */
 .drill {
   display: grid;
