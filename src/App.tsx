@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { parseGames, type Line } from './lib/pgn'
 import { emptyHistory, loadHistory, type History } from './lib/history'
+import { loadAnalyses } from './lib/analyze'
+import { lichessCards, loadPuzzles, ownCards, type PCard } from './lib/puzzles'
 import { startSync } from './lib/sync'
 import { CoachCard } from './components/CoachCard'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
+import { Puzzles } from './modes/Puzzles'
 import { Analysis } from './modes/Analysis'
 import { Selftest } from './modes/Selftest'
 
-type Mode = 'home' | 'lines' | 'traps' | 'analysis' | 'selftest'
+type Mode = 'home' | 'lines' | 'traps' | 'puzzles' | 'analysis' | 'selftest'
 type Toast = { id: number; text: string }
 
 // "last synced Xs ago" — home screen only, no spinners (006)
@@ -35,15 +38,20 @@ export default function App() {
   const [syncedAt, setSyncedAt] = useState(0)
   const [unseenN, setUnseenN] = useState(0)
   const [focus, setFocus] = useState<string | undefined>() // coach deep-link: drill this line first
+  const [ownOnly, setOwnOnly] = useState(false) // coach deep-link: tactics deals his blunders only
+  const [tactics, setTactics] = useState<PCard[]>([])
+  const [own, setOwn] = useState<PCard[]>([])
   const toastId = useRef(0)
 
-  // home-card "N new" count — refreshed each time we land on home
+  // home-card "N new" count and his own tactics cards — both refreshed each time
+  // we land on home, so a game analyzed this session is dealable straight after
   useEffect(() => {
     if (mode !== 'home') return
     fetch('/api/data/sync-state')
       .then((r) => (r.ok ? r.json() : {}))
       .then((s: { unseen?: string[] }) => setUnseenN(s.unseen?.length ?? 0))
       .catch(() => {})
+    loadAnalyses().then((s) => setOwn(ownCards(Object.values(s.games))))
   }, [mode])
 
   useEffect(
@@ -59,13 +67,15 @@ export default function App() {
   useEffect(() => {
     ;(async () => {
       try {
-        const [rep, trp, hist] = await Promise.all([
+        const [rep, trp, hist, puz] = await Promise.all([
           fetch('/data/repertoire.pgn').then((r) => r.text()),
           fetch('/data/traps.pgn').then((r) => r.text()),
           loadHistory(),
+          loadPuzzles(),
         ])
         setLines(parseGames(rep))
         setTraps(parseGames(trp))
+        setTactics(lichessCards(puz))
         historyRef.current = hist
         setState('ready')
       } catch (e) {
@@ -80,8 +90,9 @@ export default function App() {
     return <div className="center bad">Couldn't load data/*.pgn — is this running via npm run dev?</div>
 
   const h = historyRef.current
-  const go = (m: Mode, focusLine?: string) => {
+  const go = (m: Mode, focusLine?: string, only?: boolean) => {
     setFocus(focusLine)
+    setOwnOnly(!!only)
     setDealNo((n) => n + 1)
     setMode(m)
   }
@@ -113,9 +124,20 @@ export default function App() {
     )
   if (mode === 'traps')
     return wrap(<TrapCards key={dealNo} traps={traps} history={h} onExit={() => setMode('home')} />)
+  if (mode === 'puzzles')
+    return wrap(
+      <Puzzles
+        key={dealNo}
+        lichess={tactics}
+        own={own}
+        history={h}
+        ownOnly={ownOnly}
+        onExit={() => setMode('home')}
+      />,
+    )
   if (mode === 'analysis')
     return wrap(<Analysis key={dealNo} lines={lines} onExit={() => setMode('home')} />)
-  if (mode === 'selftest') return wrap(<Selftest lines={lines} traps={traps} />)
+  if (mode === 'selftest') return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} />)
 
   const lineStats = Object.values(h.lines)
   const drilled = lineStats.reduce((n, s) => n + s.seen, 0)
@@ -123,6 +145,9 @@ export default function App() {
   const cardStats = Object.values(h.traps)
   const dealt = cardStats.reduce((n, s) => n + s.seen, 0)
   const firstTry = cardStats.reduce((n, s) => n + s.seen - s.missed, 0)
+  const puzStats = Object.values(h.puzzles)
+  const puzzled = puzStats.reduce((n, s) => n + s.seen, 0)
+  const puzFirst = puzStats.reduce((n, s) => n + s.seen - s.missed, 0)
   return wrap(
     <div className="home">
       <h1>Chess Master</h1>
@@ -148,6 +173,18 @@ export default function App() {
           {dealt > 0 && (
             <div className="sub dim">
               {dealt} dealt · {Math.round((firstTry / dealt) * 100)}% first try
+            </div>
+          )}
+        </button>
+        <button className="modecard" onClick={() => go('puzzles')}>
+          <h2>Tactics</h2>
+          <div className="sub">
+            {own.length > 0 && <>your {own.length} flagged positions · </>}
+            {tactics.length} puzzles from your openings · 10 per deal
+          </div>
+          {puzzled > 0 && (
+            <div className="sub dim">
+              {puzzled} solved · {Math.round((puzFirst / puzzled) * 100)}% first try
             </div>
           )}
         </button>

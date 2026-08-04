@@ -15,10 +15,11 @@ export const WEAK_STAT_MIN = 2 // ≥2 recorded misses at ≥1/3 miss rate
 
 export interface Pick {
   kind: 'new-games' | 'left-line' | 'extend' | 'blunder-cluster' | 'weak-drill' | 'default'
-  mode: 'analysis' | 'lines' | 'traps'
+  mode: 'analysis' | 'lines' | 'traps' | 'puzzles'
   title: string
   evidence: string[] // the facts backing the pick — shown raw, fed to the voice
   focusLine?: string // line drill deals this line first
+  ownOnly?: boolean // tactics deals only his own flagged positions (013)
   ext?: ExtTrigger // extend picks: the break to propose plies for (019/020)
 }
 
@@ -93,28 +94,36 @@ export function pickNext(
     const [ph, n] = worstCluster
     return {
       kind: 'blunder-cluster',
-      // ponytail: opening clusters → drill the lines; the rest re-opens analysis
-      // until the tactics deck (013) exists to deal these positions back.
-      mode: ph === 'opening' ? 'lines' : 'analysis',
-      title: ph === 'opening' ? 'Tighten your opening moves' : `Review your ${ph} blunders`,
+      // opening clusters are a repertoire problem → drill the lines; the rest is
+      // tactics, so 013 deals those exact positions back as cards.
+      mode: ph === 'opening' ? 'lines' : 'puzzles',
+      ownOnly: ph !== 'opening',
+      title: ph === 'opening' ? 'Tighten your opening moves' : `Redo your ${ph} blunders`,
       evidence: [`${n} of your ${flagged.length} flagged moves come in the ${ph}`],
     }
   }
 
   // weakest drill/trap stat
-  const weak = (rec: Record<string, Stat>, mode: 'lines' | 'traps') =>
+  const weak = (rec: Record<string, Stat>, mode: 'lines' | 'traps' | 'puzzles') =>
     Object.entries(rec)
       .filter(([, s]) => s.missed >= WEAK_STAT_MIN && s.missed / s.seen >= 1 / 3)
       .map(([name, s]) => ({ name, s, mode, rate: s.missed / s.seen }))
-  const worstStat = [...weak(h.lines, 'lines'), ...weak(h.traps, 'traps')].sort(
-    (a, b) => b.rate - a.rate,
-  )[0]
+  const worstStat = [
+    ...weak(h.lines, 'lines'),
+    ...weak(h.traps, 'traps'),
+    ...weak(h.puzzles, 'puzzles'),
+  ].sort((a, b) => b.rate - a.rate)[0]
   if (worstStat)
     return {
       kind: 'weak-drill',
       mode: worstStat.mode,
       focusLine: worstStat.mode === 'lines' ? worstStat.name : undefined,
-      title: worstStat.mode === 'lines' ? `Re-drill "${worstStat.name}"` : 'Deal the trap cards',
+      title:
+        worstStat.mode === 'lines'
+          ? `Re-drill "${worstStat.name}"`
+          : worstStat.mode === 'traps'
+            ? 'Deal the trap cards'
+            : 'Deal the tactics cards',
       evidence: [`"${worstStat.name}": missed ${worstStat.s.missed} of ${worstStat.s.seen} recorded attempts`],
     }
 

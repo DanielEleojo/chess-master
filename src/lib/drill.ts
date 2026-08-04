@@ -26,7 +26,7 @@ export interface Drill {
 }
 
 export function makeDrill(line: Line, start = 0): Drill {
-  const chess = new Chess()
+  const chess = new Chess(line.fen)
   for (let j = 0; j < start; j++) chess.move(line.moves[j].san)
   const uc = line.trainAs === 'White' ? 'w' : 'b'
   let i = start

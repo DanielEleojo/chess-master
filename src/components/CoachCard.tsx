@@ -35,7 +35,7 @@ export function CoachCard({
   history: History
   unseen: number
   lines: Line[]
-  onGo: (mode: Pick['mode'], focusLine?: string) => void
+  onGo: (mode: Pick['mode'], focusLine?: string, ownOnly?: boolean) => void
 }) {
   const [pick, setPick] = useState<Pick | null>(null)
   const [ms, setMs] = useState<Milestone | null>(null)
@@ -165,7 +165,7 @@ export function CoachCard({
           <div className="tiny dim">engine preparing the new moves…</div>
         )
       ) : (
-        <button className="coachgo" onClick={() => onGo(pick.mode, pick.focusLine)}>
+        <button className="coachgo" onClick={() => onGo(pick.mode, pick.focusLine, pick.ownOnly)}>
           {pick.title} →
         </button>
       )}

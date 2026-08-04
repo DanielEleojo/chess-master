@@ -13,10 +13,19 @@ import { MODEL, coachUp } from '../lib/coach'
 import type { Analysis } from '../lib/analyze'
 import { emptyHistory } from '../lib/history'
 import { CLUSTER_MIN, milestone, pickNext, ratingHistory } from '../lib/recommend'
+import { OWN_QUOTA, blunderCard, dealCards, type PCard } from '../lib/puzzles'
 
 // Ported from the prototype's ?selftest=1 — same logic checks, now against the
 // fetched real seed files, plus a middleware round-trip. The app's one check.
-export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
+export function Selftest({
+  lines,
+  traps,
+  tactics,
+}: {
+  lines: Line[]
+  traps: Line[]
+  tactics: PCard[]
+}) {
   const [out, setOut] = useState<string[]>([])
 
   useEffect(() => {
@@ -217,6 +226,49 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     ok('coach: trend measured against earlier games', m.trend === 44)
     ok('coach: no games, no milestone', milestone({}) === null)
 
+    // tactics deck (ticket 013) — fen-rooted cards walked by the shared drill engine
+    ok(`tactics deck loaded: ${tactics.length} cards (expect >= 300)`, tactics.length >= 300)
+    const brokeCards: string[] = []
+    for (const c of tactics) {
+      const cd = makeDrill(c.line, c.start)
+      let steps = 0
+      while (!cd.done() && steps++ < 12) {
+        const e = cd.expected()
+        if (e.color === cd.uc) {
+          if (!cd.tryMove(e.from, e.to).ok) break
+        } else cd.autoMoves()
+      }
+      if (!cd.done()) brokeCards.push(c.key)
+    }
+    ok(`every tactics card walks its own solution (${brokeCards.slice(0, 3).join(', ') || 'none broken'})`, brokeCards.length === 0)
+    ok(
+      'tactics cards start on his turn, after the move that walked into it',
+      tactics.every((c) => c.line.moves[c.start].color === (c.line.trainAs === 'White' ? 'w' : 'b')),
+    )
+    ok(
+      'tactics cards are 1-2 moves for him (no veryLong grinds)',
+      tactics.every((c) => Math.ceil((c.line.moves.length - c.start) / 2) <= 2),
+    )
+    const bCard = blunderCard(mkA({ uuid: 'g1', desc: 'You lost vs X · rapid' }), {
+      ply: 10, san: 'Qd5', fen: 'r1bqkbnr/pppp1pp1/2n4p/8/2B1P3/2p2N2/PP3PPP/RNBQK2R w KQkq - 0 6',
+      best: 'e1g1', bestSan: 'O-O', pvSan: ['O-O', 'Nf6'], punishSan: [], swingCp: 104, severity: 'mistake',
+    })!
+    ok(
+      'his own flagged move becomes a card starting on his turn',
+      !!bCard && bCard.start === 0 && bCard.own && bCard.line.moves[0].san === 'O-O',
+    )
+    ok('own card names the move he missed and why (017 fact layer)', bCard?.why.startsWith('O-O') && bCard.why.length > 12)
+    const pool = tactics.slice(0, 50)
+    const mineCards = Array.from({ length: 9 }, (_, i) => ({ ...bCard, key: 'o:' + i }))
+    const dealt10 = dealCards(pool, mineCards, emptyHistory())
+    ok(
+      `deal reserves ${OWN_QUOTA} of 10 cards for his own mistakes`,
+      dealt10.length === 10 && dealt10.filter((c) => c.own).length === OWN_QUOTA,
+    )
+    ok('coach deep-link deals his own positions only', dealCards(pool, mineCards, emptyHistory(), true).every((c) => c.own))
+    ok('no flagged games yet: deal still fills from lichess', dealCards(pool, [], emptyHistory(), true).length === 10)
+    ok('coach: non-opening cluster deals those positions back as cards (013)', pClu.mode === 'puzzles' && pClu.ownOnly === true)
+
     setOut(res)
     ;(async () => {
       const payload = { probe: Math.floor(performance.now()) }
@@ -260,7 +312,7 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
       const up = await coachUp()
       setOut((o) => [...o, `PASS  coach voice: ollama ${up ? `reachable (${MODEL})` : 'down — facts-only fallback active'}`])
     })()
-  }, [lines, traps])
+  }, [lines, traps, tactics])
 
   const fails = out.filter((s) => s.startsWith('FAIL')).length
   return (

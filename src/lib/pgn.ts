@@ -10,6 +10,7 @@ export interface Line {
   trainAs: 'White' | 'Black'
   moves: Move[]
   comments: Record<string, string> // fen after the move -> why
+  fen?: string // start position; unset = the initial position (set by puzzle cards, 013)
 }
 
 export function parseGames(raw: string): Line[] {

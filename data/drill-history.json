@@ -42,12 +42,60 @@
    "missed": 0
   }
  },
+ "puzzles": {
+  "o:e4f30b80-8f8d-11f1-bf80-6a5c6501000f#11": {
+   "seen": 1,
+   "missed": 0
+  },
+  "o:992bef0d-8f8d-11f1-ad93-3bdf0f01000f#30": {
+   "seen": 1,
+   "missed": 0
+  },
+  "o:1c0b975b-8fda-11f1-8a72-93bfcf01000f#29": {
+   "seen": 1,
+   "missed": 0
+  },
+  "o:e4f30b80-8f8d-11f1-bf80-6a5c6501000f#37": {
+   "seen": 1,
+   "missed": 0
+  },
+  "p:zlAV7": {
+   "seen": 1,
+   "missed": 0
+  },
+  "p:bUYiz": {
+   "seen": 1,
+   "missed": 0
+  },
+  "p:fNi6g": {
+   "seen": 1,
+   "missed": 0
+  },
+  "p:YL3qv": {
+   "seen": 1,
+   "missed": 0
+  },
+  "p:589si": {
+   "seen": 1,
+   "missed": 0
+  },
+  "p:HZLXU": {
+   "seen": 1,
+   "missed": 0
+  }
+ },
  "sessions": [
   {
    "mode": "traps",
    "at": "2026-08-03T23:15:10.026Z",
    "cards": 10,
    "good": 2
+  },
+  {
+   "mode": "puzzles",
+   "at": "2026-08-04T09:36:46.096Z",
+   "cards": 10,
+   "good": 9
   }
  ]
 }

@@ -6,7 +6,7 @@ export interface Stat {
 }
 
 export interface SessionLog {
-  mode: 'lines' | 'traps'
+  mode: 'lines' | 'traps' | 'puzzles'
   at: string
   lines?: number
   moves?: number
@@ -19,10 +19,11 @@ export interface SessionLog {
 export interface History {
   lines: Record<string, Stat>
   traps: Record<string, Stat>
+  puzzles: Record<string, Stat> // tactics cards (013), lichess and his own alike
   sessions: SessionLog[]
 }
 
-export const emptyHistory = (): History => ({ lines: {}, traps: {}, sessions: [] })
+export const emptyHistory = (): History => ({ lines: {}, traps: {}, puzzles: {}, sessions: [] })
 
 export async function loadHistory(): Promise<History> {
   try {

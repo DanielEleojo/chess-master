@@ -4,6 +4,7 @@
 
 - **Line** — one repertoire sequence Daniel drills (e.g. "Caro-Kann, Advance"). Belongs to a **System** (Italian / Caro-Kann / Slav).
 - **Trap card** — a single-position quiz: find the one punishing move against junk openings he actually faces.
+- **Tactics card** — a position to solve, at most two of his moves deep (the opponent answers in between). Two sources, dealt from one deck: a filtered CC0 lichess puzzle tagged to his systems or a beginner motif, and an **own-mistake card** — one of his own flagged moves handed back as the position he got wrong.
 - **Why-comment** — the authored one-line principle attached to a drillable move; shown on every hit and miss. Every drillable move must carry one.
 - **Miss** — a wrong attempt at a drillable move. Misses teach: they reveal the why, play out the consequence, and requeue the item until clean.
 - **Grace first attempt** — a line's first-ever miss is never recorded in stats (teaching is unchanged); first-attempt hits count.
@@ -11,7 +12,7 @@
 ## Games & analysis
 
 - **Unseen game** — a synced game not yet opened in analysis; drives the "N new" badge.
-- **Blunder / Mistake** — Daniel's move whose eval swing crosses the blunder/mistake threshold. Carries the position before it — a future tactics card.
+- **Blunder / Mistake** — Daniel's move whose eval swing crosses the blunder/mistake threshold. Carries the position before it, which the tactics deck deals back as an own-mistake card.
 - **Book departure** — the ply where a real game left the deepest-matching repertoire line, and who left it (him or the opponent). Feeds miss-driven line extension.
 
 ## Coaching
