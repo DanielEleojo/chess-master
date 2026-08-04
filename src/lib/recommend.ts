@@ -14,7 +14,7 @@ export const CLUSTER_MIN = 3 // ≥3 flagged moves land in the same game phase
 export const WEAK_STAT_MIN = 2 // ≥2 recorded misses at ≥1/3 miss rate
 
 export interface Pick {
-  kind: 'new-games' | 'left-line' | 'extend' | 'blunder-cluster' | 'weak-drill' | 'default'
+  kind: 'inactive' | 'new-games' | 'left-line' | 'extend' | 'blunder-cluster' | 'weak-drill' | 'default'
   mode: 'analysis' | 'lines' | 'traps' | 'puzzles'
   title: string
   evidence: string[] // the facts backing the pick — shown raw, fed to the voice
@@ -23,7 +23,33 @@ export interface Pick {
   ext?: ExtTrigger // extend picks: the break to propose plies for (019/020)
 }
 
+// Ticket 023/024: days since his last drill session before the coach leads
+// with that instead of its usual pick — evidence-driven, not a calendar nag.
+export const INACTIVITY_DAYS = 5
+
 export function pickNext(
+  unseen: number,
+  analyses: Analysis[],
+  h: History,
+  ext: ExtStore = emptyExt(),
+): Pick {
+  const last = h.sessions[h.sessions.length - 1]
+  if (last) {
+    const days = Math.floor((Date.now() - new Date(last.at).getTime()) / 86400000)
+    if (days >= INACTIVITY_DAYS) {
+      const next = nextByEvidence(unseen, analyses, h, ext)
+      return {
+        ...next,
+        kind: 'inactive',
+        title: `Back after ${days} days — ${next.title}`,
+        evidence: [`${days} days since your last session`, ...next.evidence],
+      }
+    }
+  }
+  return nextByEvidence(unseen, analyses, h, ext)
+}
+
+function nextByEvidence(
   unseen: number,
   analyses: Analysis[],
   h: History,

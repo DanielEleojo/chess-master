@@ -49,9 +49,15 @@ A running local web app Daniel starts with one command and actually trains with:
 
 - [Sparring results feed the coach](tickets/022-sparring-feeds-the-coach.md) — the map's last open thread, closed with no new rung: a finished spar game is recorded as one of his games (`data/spar-games.json`, chess.com's own shape, rung name as the opponent, `rated: false`), flagged unseen like a real arrival, and listed by analysis mode — so the existing walk, blunder clusters and own-mistake cards read it for free. `bookWalk` is skipped for `time_class: 'sparring'`: the app replays the book line itself, so counting it would invent left-book and extension evidence he never produced.
 
+- [Is the coach up to par as a mentor?](tickets/023-redefine-the-coach.md) — grilled the Coach's job against the sub-1200 reality: evidence-only ladder and positional/endgame teaching stay out (no goal-setting, no pawn-structure theory — tactics decide these games), but tone drops "friendly" for a rigorous baseline that escalates on real blunders and repeat trap misses, "Coach says" gains an inactivity check-in, and Puzzles adopts Spar's never-regress difficulty ratchet. Push notifications and fact-grounded Q&A spawned as open design tickets, lower priority.
+- [Coach gets an edge — tone rewrite + inactivity nudge](tickets/024-coach-gets-an-edge.md) — `coach.ts` drops "friendly" for a rigorous baseline, harsher for real blunders (`severity === 'blunder'`) and repeat weak-drill picks (never a first miss); `recommend.ts` gains a top rung for ≥5 days quiet, outranking even unseen games. Verified live on home; Selftest/Analysis click-through blocked by an unrelated pre-existing crash (028).
+- [Puzzles ratchet difficulty like Spar](tickets/025-puzzles-difficulty-ratchet.md) — `build-puzzles.py`'s band widened to (600, 2000) and rebuilt (720 puzzles, one deck); a `FLOORS` ladder (600/850/1100/1350/1600) mirrors Spar's rung shape — 2 strong deals (≥80% hit rate) at a floor retires it for good, `cm.puzzleFloor`/`cm.puzzleStrong` in localStorage, badge in Tactics' `ModeHead`. No dynamic ceiling — the band's top already bounds it.
+
 ## Not yet specified
 
-- Nothing outstanding on the map. Every mode reaches the coach and every coach rung has a real destination — the next ticket comes from Daniel training on it.
+- [026](tickets/026-coach-push-notifications.md) — push notifications design. Open, unassigned, unblocked, lower priority.
+- [027](tickets/027-coach-followup-qa.md) — fact-grounded coach Q&A design. Open, unassigned, unblocked, lower priority.
+- [028](tickets/028-selftest-crash-on-load.md) — `?selftest=1` blanks the app; renders before data loads, no error boundary. Discovered verifying 024, unrelated to it. Open, unassigned, unblocked.
 
 ## Out of scope
 

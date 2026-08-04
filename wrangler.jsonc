@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "chess-master",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-05-01",
+  "assets": {
+    "directory": "./dist/",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/data/repertoire.pgn"]
+  },
+  "kv_namespaces": [{ "binding": "DATA", "id": "2357d8470c904e63b6c1dbed8da73629" }],
+  "ai": { "binding": "AI" },
+  "routes": [{ "pattern": "chess.meetdanielbaba.com", "custom_domain": true }]
+}

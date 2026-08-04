@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { loadAnalyses } from '../lib/analyze'
 import { coachPitch } from '../lib/coach'
+import type { Register } from '../lib/coach'
 import { startEngine } from '../lib/engine'
 import {
   acceptExtension,
@@ -68,7 +69,11 @@ export function CoachCard({
       const mLine = ms
         ? `His ${ms.timeClass} rating is ${ms.rating} over ${ms.games} games; the next milestone is ${ms.next}.`
         : ''
-      const text = await coachPitch(`pitch:${p.kind}:${p.title}:${unseen}`, mLine, p)
+      // harsh only where the evidence already proves a repeat: a weak-drill pick
+      // structurally requires ≥2 misses (WEAK_STAT_MIN), and 'inactive' means he
+      // was already told and let it sit — never on a first-time pick.
+      const register: Register = p.kind === 'weak-drill' || p.kind === 'inactive' ? 'harsh' : 'plain'
+      const text = await coachPitch(`pitch:${p.kind}:${p.title}:${unseen}`, mLine, p, register)
       if (!dead && text) setProse(text)
     })()
     return () => {

@@ -2,3 +2,4 @@ node_modules/
 dist/
 data/selftest.json
 data/lichess_db_puzzle.csv.zst
+.wrangler/

@@ -56,6 +56,7 @@ export interface PCard {
   why: string // shown on a miss
   own: boolean // his own game, not lichess
   retry?: boolean // requeued copy — doesn't touch history
+  rating?: number // lichess puzzle rating (025's floor ratchet filters on this); unset for his own cards
 }
 
 // Play uci moves from a fen into a Line the drill engine can walk.
@@ -92,6 +93,7 @@ export function puzzleCard(p: Puzzle, label: string): PCard | null {
     sub: `${p.rating} · ${solution.length === 1 ? 'one move' : solution.length + ' moves'}`,
     why: `${motif.join(', ') || 'Tactic'} — the line runs ${solution.map((m) => m.san).join(' ')}`,
     own: false,
+    rating: p.rating,
   }
 }
 

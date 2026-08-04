@@ -17,15 +17,17 @@ import zstandard as zstd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "data", "lichess_db_puzzle.csv.zst")
-OUT = os.path.join(ROOT, "data", "puzzles.json")
+OUT = os.path.join(ROOT, "public", "data", "puzzles.json")
 URL = "https://database.lichess.org/lichess_db_puzzle.csv.zst"
 
 # --- knobs ---------------------------------------------------------------
-BAND = (600, 1300)  # puzzle rating; sub-1200 player, lichess puzzle ratings run high
+# 025: widened from (600, 1300) so the difficulty ratchet has room to climb —
+# floor rises client-side (Puzzles.tsx), this band is just the outer bound.
+BAND = (600, 2000)
 MIN_POP = 80  # lichess popularity 0-100 — vetted puzzles only
 MIN_PLAYS = 200
 LENGTHS = {"oneMove", "short"}  # 1-2 moves for him; 'long'/'veryLong' aren't beginner cards
-PER_DECK = 30
+PER_DECK = 60
 
 # key, label, kind, match. First match wins, so the rare/valuable decks come first.
 DECKS = [

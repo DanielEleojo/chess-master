@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "check": "tsc"
+    "host": "vite --host",
+    "check": "tsc && tsc -p tsconfig.worker.json",
+    "build": "vite build",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
@@ -20,6 +23,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.9.0",
-    "vite": "^7.1.0"
+    "vite": "^7.1.0",
+    "wrangler": "^4.0.0"
   }
 }

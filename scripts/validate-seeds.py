@@ -7,13 +7,17 @@ from pathlib import Path
 
 import chess.pgn
 
-DATA = Path(__file__).resolve().parent.parent / "data"
-REQUIRED = {"repertoire.pgn": ("System", "TrainAs"), "traps.pgn": ("Punisher",)}
+ROOT = Path(__file__).resolve().parent.parent
+REQUIRED = {
+    ROOT / "data" / "repertoire.pgn": ("System", "TrainAs"),
+    ROOT / "public" / "data" / "traps.pgn": ("Punisher",),
+}
 
 failures = 0
-for fname, tags in REQUIRED.items():
+for path, tags in REQUIRED.items():
+    fname = path.name
     count = 0
-    with open(DATA / fname) as fh:
+    with open(path) as fh:
         while (game := chess.pgn.read_game(fh)) is not None:
             count += 1
             name = game.headers.get("Event", f"game {count}")

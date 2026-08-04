@@ -20,7 +20,7 @@
 - **Coach** — the entity that reviews and recommends. It owns exactly two surfaces: narrating flagged moves in game analysis, and the **Coach says** card on home. It never plays for Daniel.
 - **Explanation** — why a move breaks (or builds) the position. Always two layers: the **fact layer** and the **coach voice**. A bare engine line is not an explanation.
 - **Fact layer** — locally computed truths about a flagged move: material hung, tempo lost, king safety, what the best line actually wins. Deterministic, offline, instant.
-- **Coach voice** — the local free LLM phrasing the fact layer as prose. The voice never computes chess and never decides recommendations; it only articulates facts and picks made by code.
+- **Coach voice** — the LLM phrasing the fact layer as prose. Baseline is rigorous, not encouraging: states the mistake and the fix plainly, no cushioning. Escalates to a blunter register for a genuine **blunder** (never a mere **mistake**) and for a repeat miss on a trap he's already seen — never on the graced first attempt (see **Grace first attempt**). The voice never computes chess and never decides recommendations; it only articulates facts and picks made by code.
 - **Coach says** — the home-screen recommendation: what to practice right now and why, chosen by a deterministic priority ladder over Daniel's data, framed against the next milestone.
 - **Weakness** — a recurring, evidenced pattern the Coach can act on (a line he keeps leaving early, a blunder cluster, a weak drill stat) — not a one-off mistake.
 - **Milestone ladder** — the visible path from Daniel's real rating (extracted from synced games) toward "master": next stop first. Progress is measured, not vibes.

@@ -71,11 +71,71 @@ function dataApi(): Plugin {
           res.end()
         }
       })
+
+      // POST /api/coach <-> local Ollama (017/ADR 0001) — dev-only mirror of
+      // the deployed Worker's /api/coach, which calls Workers AI instead.
+      server.middlewares.use('/api/coach', (req, res) => {
+        if (req.method === 'GET') {
+          res.setHeader('Content-Type', 'application/json')
+          return res.end(JSON.stringify({ ok: true }))
+        }
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          return res.end()
+        }
+        let body = ''
+        req.on('data', (c) => (body += c))
+        req.on('end', async () => {
+          try {
+            const { prompt } = JSON.parse(body)
+            const r = await fetch('http://localhost:11434/api/generate', {
+              method: 'POST',
+              body: JSON.stringify({
+                model: 'qwen2.5:7b-instruct',
+                prompt,
+                stream: false,
+                keep_alive: '30m',
+                options: { temperature: 0.6, num_predict: 160 },
+              }),
+            })
+            const text = r.ok ? ((await r.json()).response ?? '') : ''
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ response: text }))
+          } catch {
+            res.statusCode = 502
+            res.end()
+          }
+        })
+      })
+    },
+  }
+}
+
+// Stockfish's own loader takes its *own* hashed script URL and swaps the
+// .js suffix for .wasm to fetch its binary — a runtime string Vite can't see
+// to know it should copy the companion file. Mirror the hash it lands on.
+function stockfishWasm(): Plugin {
+  const wasmSrc = path.resolve(
+    import.meta.dirname,
+    'node_modules/stockfish/bin/stockfish-18-lite-single.wasm',
+  )
+  return {
+    name: 'stockfish-wasm',
+    generateBundle(_, bundle) {
+      for (const fileName of Object.keys(bundle)) {
+        if (/^assets\/stockfish-18-lite-single-.*\.js$/.test(fileName)) {
+          this.emitFile({
+            type: 'asset',
+            fileName: fileName.replace(/\.js$/, '.wasm'),
+            source: fs.readFileSync(wasmSrc),
+          })
+        }
+      }
     },
   }
 }
 
 export default defineConfig({
-  plugins: [react(), dataApi()],
+  plugins: [react(), dataApi(), stockfishWasm()],
   server: { port: 5173, strictPort: true },
 })

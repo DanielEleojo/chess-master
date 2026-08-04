@@ -183,6 +183,20 @@ export function Selftest({
     ok('coach: weak drill stat picked with evidence', pWeak.kind === 'weak-drill' && pWeak.focusLine === 'Italian main line' && pWeak.evidence[0].includes('4 of 6'))
     ok('coach: clean data falls back to default reps', pickNext(0, [], emptyHistory()).kind === 'default')
 
+    // inactivity rung (023/024) — leads the ladder, folds in the fallback pick
+    const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString()
+    const quietH = emptyHistory()
+    quietH.sessions = [{ mode: 'lines', at: daysAgo(6) }]
+    const pQuiet = pickNext(0, [], quietH)
+    ok(
+      'coach: 6 days quiet leads with inactivity, folds in the fallback pick',
+      pQuiet.kind === 'inactive' && pQuiet.title.includes('6 days') && pQuiet.mode === 'lines',
+    )
+    ok('coach: inactivity outranks even unseen games', pickNext(3, [], quietH).kind === 'inactive')
+    const freshH = emptyHistory()
+    freshH.sessions = [{ mode: 'lines', at: daysAgo(1) }]
+    ok('coach: 1 day quiet does not trigger inactivity', pickNext(0, [], freshH).kind !== 'inactive')
+
     // line extension (tickets 019/020) — trigger, rung, dismissal, grace, PGN append
     const pBr = pickNext(0, [oppBook('X'), oppBook('X')], emptyHistory())
     ok('extend: opp-left same break twice proposes a branch', pBr.kind === 'extend' && pBr.ext?.kind === 'branch' && pBr.ext.oppSan === 'd5')
@@ -355,7 +369,7 @@ export function Selftest({
       setOut((o) => [...o, (engineOk ? 'PASS' : 'FAIL') + '  stockfish worker evals startpos'])
       // coach voice (017): reachability is informational — facts-only fallback is by design
       const up = await coachUp()
-      setOut((o) => [...o, `PASS  coach voice: ollama ${up ? `reachable (${MODEL})` : 'down — facts-only fallback active'}`])
+      setOut((o) => [...o, `PASS  coach voice: ${up ? `reachable (${MODEL})` : 'down — facts-only fallback active'}`])
     })()
   }, [lines, traps, tactics])
 

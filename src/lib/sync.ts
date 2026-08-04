@@ -2,7 +2,12 @@
 // chess.com, diff by uuid, persist via the data middleware, surface arrivals.
 // Plain fetch: the browser HTTP cache does the ETag 304 revalidation (004).
 
-export const USER = 'babadaniel'
+// Per-account chess.com username (multi-account): set once at boot via
+// account.ts, empty until then so an unset account just syncs nothing.
+export let USER = ''
+export function setUser(u: string): void {
+  USER = u
+}
 
 export interface Game {
   uuid: string

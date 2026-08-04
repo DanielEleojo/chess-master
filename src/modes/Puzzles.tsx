@@ -9,6 +9,31 @@ import { dealCards, type PCard } from '../lib/puzzles'
 
 type Dealt = PCard & { result: 'good' | 'bad' | null }
 
+// 025: the served band ratchets up like Spar's rung ladder — two strong deals
+// (≥80% first-try, own-mistake cards included) at a floor retires it for good.
+// A weak deal doesn't reset the count, same as Spar not undoing wins on a loss.
+export const FLOORS = [600, 850, 1100, 1350, 1600]
+export const STRONG_HITRATE = 0.8
+export const DEALS_TO_CLIMB = 2
+
+function floorIdx(): number {
+  return Math.min(FLOORS.length - 1, Math.max(0, +(localStorage.getItem('cm.puzzleFloor') ?? 0) || 0))
+}
+
+// Called once a deal finishes; ownOnly deals (no band puzzles at all) don't count.
+function ratchet(hitRate: number): void {
+  if (hitRate < STRONG_HITRATE) return
+  const idx = floorIdx()
+  if (idx >= FLOORS.length - 1) return // top rung — nothing above it
+  const strong = (+(localStorage.getItem('cm.puzzleStrong') ?? 0) || 0) + 1
+  if (strong < DEALS_TO_CLIMB) {
+    localStorage.setItem('cm.puzzleStrong', String(strong))
+    return
+  }
+  localStorage.setItem('cm.puzzleFloor', String(idx + 1))
+  localStorage.setItem('cm.puzzleStrong', '0')
+}
+
 // Tactics (ticket 013). Same card sprint as the trap deck, but a card can run
 // two moves: solve, the opponent answers, solve again. `ownOnly` is the coach's
 // blunder-cluster deep link — deal his own mistakes back and nothing else.
@@ -25,8 +50,15 @@ export function Puzzles({
   ownOnly?: boolean
   onExit: () => void
 }) {
+  const [floor] = useState(() => FLOORS[floorIdx()])
+  const [strong] = useState(() => +(localStorage.getItem('cm.puzzleStrong') ?? 0) || 0)
   const [cards] = useState<Dealt[]>(() =>
-    dealCards(lichess, own, history, ownOnly).map((c) => ({ ...c, result: null })),
+    dealCards(
+      lichess.filter((c) => c.rating === undefined || c.rating >= floor),
+      own,
+      history,
+      ownOnly,
+    ).map((c) => ({ ...c, result: null })),
   )
   const [ci, setCi] = useState(0)
   const [, force] = useState(0) // dots repaint after result mutation
@@ -122,13 +154,15 @@ export function Puzzles({
     st.current.drill = null
     const originals = cards.filter((c) => !c.retry)
     for (const c of originals) bump(history.puzzles, c.key, c.result === 'bad')
+    const good = originals.filter((c) => c.result === 'good').length
     history.sessions.push({
       mode: 'puzzles',
       at: new Date().toISOString(),
       cards: originals.length,
-      good: originals.filter((c) => c.result === 'good').length,
+      good,
     })
     saveHistory(history)
+    if (!ownOnly && originals.length) ratchet(good / originals.length)
     setCi(cards.length)
   }
 
@@ -168,6 +202,13 @@ export function Puzzles({
             : 'your mistakes and your openings’ tactics · miss = see the shot, it returns this deal'
         }
         onExit={onExit}
+        right={
+          !ownOnly && (
+            <span className="badge gold">
+              {floor}+ · {strong}/{DEALS_TO_CLIMB}
+            </span>
+          )
+        }
       />
       {!done && c && (
         <div className="play">

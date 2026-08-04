@@ -4,7 +4,8 @@ import { emptyHistory, loadHistory, type History } from './lib/history'
 import { loadAnalyses } from './lib/analyze'
 import { lichessCards, loadPuzzles, ownCards, type PCard } from './lib/puzzles'
 import { milestone, ratingHistory, MILESTONES, type Milestone } from './lib/recommend'
-import { startSync, USER, type Game } from './lib/sync'
+import { startSync, setUser, type Game } from './lib/sync'
+import { resolveChessUsername } from './lib/account'
 import { CoachCard } from './components/CoachCard'
 import { LineDrill } from './modes/LineDrill'
 import { TrapCards, buildDeck } from './modes/TrapCards'
@@ -96,6 +97,7 @@ export default function App() {
   const [analysedN, setAnalysedN] = useState(0)
   const [rung, setRung] = useState(0) // sparring ladder, see Spar.tsx — localStorage
   const [ms, setMs] = useState<Milestone | null>(null) // real rating off the archives
+  const [chessUser, setChessUser] = useState('') // this account's chess.com username
   const toastId = useRef(0)
 
   // Rating ladder from the synced archives — read once at boot, shown in the
@@ -134,15 +136,26 @@ export default function App() {
     setRung(+(localStorage.getItem('cm.rung') ?? 0) || 0)
   }, [mode])
 
-  useEffect(
-    () =>
-      startSync({
+  // Multi-account: this login's chess.com username (prompted once, then
+  // stored) has to resolve before sync knows whose games to pull.
+  useEffect(() => {
+    let stop: (() => void) | undefined
+    let cancelled = false
+    void resolveChessUsername().then((name) => {
+      setUser(name)
+      if (cancelled) return
+      setChessUser(name)
+      stop = startSync({
         onArrivals: (msgs) =>
           setToasts((t) => [...t, ...msgs.map((text) => ({ id: ++toastId.current, text }))]),
         onSynced: setSyncedAt,
-      }),
-    [],
-  )
+      })
+    })
+    return () => {
+      cancelled = true
+      stop?.()
+    }
+  }, [])
 
   useEffect(() => {
     ;(async () => {
@@ -243,7 +256,7 @@ export default function App() {
       <header className="sheethead">
         <span className="eyebrow">Chess Master</span>
         <span className="who">
-          {USER} · <LastSynced at={syncedAt} />
+          {chessUser || '…'} · <LastSynced at={syncedAt} />
         </span>
       </header>
       {ms && <Climb ms={ms} />}

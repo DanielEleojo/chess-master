@@ -61,7 +61,7 @@ function CoachNote({ a, bl }: { a: GameAnalysis; bl: Blunder }) {
     setProse(null)
     setWaiting(true)
     const ctx = `In his game (${a.desc}), playing ${a.color === 'w' ? 'White' : 'Black'}, on move ${Math.floor(bl.ply / 2) + 1} he played ${bl.san}; the engine prefers ${bl.bestSan}.`
-    coachSay(`${a.uuid}:${bl.ply}`, ctx, facts).then((t) => {
+    coachSay(`${a.uuid}:${bl.ply}`, ctx, facts, bl.severity === 'blunder' ? 'harsh' : 'plain').then((t) => {
       if (!live) return
       setProse(t)
       setWaiting(false)

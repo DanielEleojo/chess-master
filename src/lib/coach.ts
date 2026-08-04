@@ -1,17 +1,37 @@
-// Coach voice (ticket 017, ADR 0001): Ollama phrases the fact layer as prose.
+// Coach voice (ticket 017, ADR 0001): an LLM phrases the fact layer as prose.
 // It never computes chess — on any failure the caller keeps showing the facts.
 // Daniel reacts to prose quality: the knob is this prompt, not the model.
-const OLLAMA = 'http://localhost:11434'
-export const MODEL = 'qwen2.5:7b-instruct'
+// Routed through the Worker's /api/coach (Workers AI) rather than a direct
+// browser->Ollama call — that only worked when both shared Daniel's laptop.
+export const MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8'
 
 // ponytail: session-only prose cache — regeneration keeps prompt tweaks visible;
 // persist into analysis.json if the wait ever annoys.
 const cache = new Map<string, string>()
 
-export async function coachSay(key: string, context: string, facts: string[]): Promise<string | null> {
+// Ticket 023/024: rigorous baseline, no cushioning — a "friendly" coach doesn't
+// hold him accountable. 'harsh' is reserved for real blunders and repeats the
+// evidence already proves (recommend.ts's weak-drill/inactive rungs, and
+// analyze.ts's 'blunder' severity) — never a first-ever miss.
+export type Register = 'plain' | 'harsh'
+
+function persona(register: Register): string {
+  const base =
+    'You are a chess coach talking to an adult beginner rated about 800. Be rigorous, not encouraging: state the mistake and the fix plainly, no cushioning, no exclamation points.'
+  return register === 'harsh'
+    ? base + ' This one is bad enough to say so plainly — call it what it is, still no insults.'
+    : base
+}
+
+export async function coachSay(
+  key: string,
+  context: string,
+  facts: string[],
+  register: Register = 'plain',
+): Promise<string | null> {
   return generate(
     key,
-    `You are a friendly chess coach talking to an adult beginner rated about 800.
+    `${persona(register)}
 ${context}
 Verified facts (computed by the engine — the only truth you may use):
 ${facts.map((f) => '- ' + f).join('\n')}
@@ -24,10 +44,11 @@ export async function coachPitch(
   key: string,
   milestoneLine: string,
   pick: { title: string; evidence: string[] },
+  register: Register = 'plain',
 ): Promise<string | null> {
   return generate(
     key,
-    `You are a friendly chess coach talking to an adult beginner.
+    `${persona(register)}
 ${milestoneLine}
 The training plan (already decided by the trainer, not by you): ${pick.title}.
 Evidence from his own games and drills:
@@ -40,16 +61,10 @@ async function generate(key: string, prompt: string): Promise<string | null> {
   const hit = cache.get(key)
   if (hit) return hit
   try {
-    const r = await fetch(OLLAMA + '/api/generate', {
+    const r = await fetch('/api/coach', {
       method: 'POST',
       signal: AbortSignal.timeout(30000),
-      body: JSON.stringify({
-        model: MODEL,
-        prompt,
-        stream: false,
-        keep_alive: '30m', // stay warm for the session — cold load costs ~30s
-        options: { temperature: 0.6, num_predict: 160 },
-      }),
+      body: JSON.stringify({ prompt }),
     })
     if (!r.ok) return null
     const text: string = ((await r.json()).response ?? '').trim()
@@ -62,7 +77,7 @@ async function generate(key: string, prompt: string): Promise<string | null> {
 
 export async function coachUp(): Promise<boolean> {
   try {
-    return (await fetch(OLLAMA + '/api/tags', { signal: AbortSignal.timeout(1500) })).ok
+    return (await fetch('/api/coach', { signal: AbortSignal.timeout(3000) })).ok
   } catch {
     return false
   }
