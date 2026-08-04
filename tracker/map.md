@@ -47,9 +47,11 @@ A running local web app Daniel starts with one command and actually trains with:
 
 - [Give the app a visual identity — the scoresheet](tickets/021-visual-identity-scoresheet.md) — 014's pass made the modes consistently *generic* (default dark + one gold accent), so the app took a direction off its own subject: the palette comes from a real roll-up tournament board (buff squares, vinyl green, the clock's red flag), brass now means **earned** and red means **wrong** with the `?`/`??` glyphs carrying severity, home leads with the milestone ladder drawn to scale over ruled ledger rows, the game list is a crosstable (`1`/`0`/`½`), and every board mode shares one `.play` shell with feedback *beside* the board instead of 500px under it. Surfaced five real bugs — chiefly a pixel-sized `Board` that broke mobile on every mode.
 
+- [Sparring results feed the coach](tickets/022-sparring-feeds-the-coach.md) — the map's last open thread, closed with no new rung: a finished spar game is recorded as one of his games (`data/spar-games.json`, chess.com's own shape, rung name as the opponent, `rated: false`), flagged unseen like a real arrival, and listed by analysis mode — so the existing walk, blunder clusters and own-mistake cards read it for free. `bookWalk` is skipped for `time_class: 'sparring'`: the app replays the book line itself, so counting it would invent left-book and extension evidence he never produced.
+
 ## Not yet specified
 
-- Progress/data model tying modes together — the coach ladder (018) now reads drill-history (lines, traps and 013's puzzle bucket), sync-state and analysis, and every rung has a real destination; how engine sparring (014) results feed it — a new rung, fresh evidence, or nothing at all — sharpens once that mode exists.
+- Nothing outstanding on the map. Every mode reaches the coach and every coach rung has a real destination — the next ticket comes from Daniel training on it.
 
 ## Out of scope
 

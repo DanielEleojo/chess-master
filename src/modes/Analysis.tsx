@@ -12,6 +12,7 @@ import {
   MOVE_MS,
   analyzeGame,
   loadAnalyses,
+  loadSparGames,
   saveAnalyses,
   type Analysis as GameAnalysis,
   type AnalysisStore,
@@ -109,6 +110,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
         const j = await (await fetch('/api/data/archives/' + m)).json()
         all.push(...(j.games ?? []))
       }
+      all.push(...(await loadSparGames())) // 014's games review like any other
       const st: { unseen?: string[] } = await fetch('/api/data/sync-state').then((r) =>
         r.ok ? r.json() : {},
       )
@@ -231,7 +233,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
       <>
         <ModeHead
           title="Game analysis"
-          sub={`${games.length} games from your archives · pick one, the engine flags the damage`}
+          sub={`${games.length} games — your archives and your sparring · pick one, the engine flags the damage`}
           onExit={onExit}
           right={unseen.size > 0 ? <span className="badge">{unseen.size} new</span> : undefined}
         />

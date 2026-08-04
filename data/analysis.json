@@ -542,6 +542,94 @@
     "by": "opp",
     "expectedSan": null
    }
+  },
+  "spar-1785846598": {
+   "uuid": "spar-1785846598",
+   "at": "2026-08-04T12:30:24.102Z",
+   "v": 4,
+   "ms": 300,
+   "color": "w",
+   "desc": "You lost vs Careless · sparring",
+   "endTime": 1785846598,
+   "evals": [
+    34,
+    33,
+    67,
+    -73,
+    60,
+    -629,
+    442,
+    -406,
+    -416
+   ],
+   "blunders": [
+    {
+     "ply": 2,
+     "san": "Bc4",
+     "fen": "rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2",
+     "best": "e4e5",
+     "bestSan": "e5",
+     "pvSan": [
+      "e5",
+      "Nd5",
+      "c4",
+      "Nb6",
+      "d4"
+     ],
+     "punishSan": [
+      "Nxe4"
+     ],
+     "swingCp": 140,
+     "severity": "mistake"
+    },
+    {
+     "ply": 4,
+     "san": "Qh5",
+     "fen": "rnbqkb1r/1ppppppp/5n2/p7/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 3",
+     "best": "e4e5",
+     "bestSan": "e5",
+     "pvSan": [
+      "e5",
+      "d5",
+      "Be2",
+      "Nfd7",
+      "d4"
+     ],
+     "punishSan": [
+      "Nxh5",
+      "d4",
+      "a4",
+      "e5",
+      "d5"
+     ],
+     "swingCp": 689,
+     "severity": "blunder"
+    },
+    {
+     "ply": 6,
+     "san": "Qxf7+",
+     "fen": "rnbqkb1r/1ppppppp/8/p2n3Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 2 4",
+     "best": "e4d5",
+     "bestSan": "exd5",
+     "pvSan": [
+      "exd5",
+      "e6",
+      "d4",
+      "exd5",
+      "Bxd5"
+     ],
+     "punishSan": [
+      "Kxf7",
+      "Nf3",
+      "Ke8",
+      "exd5",
+      "e6"
+     ],
+     "swingCp": 848,
+     "severity": "blunder"
+    }
+   ],
+   "book": null
   }
  }
 }

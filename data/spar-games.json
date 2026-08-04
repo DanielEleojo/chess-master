@@ -1,0 +1,20 @@
+{
+ "games": [
+  {
+   "uuid": "spar-1785846598",
+   "time_class": "sparring",
+   "rated": false,
+   "end_time": 1785846598,
+   "rules": "chess",
+   "pgn": "[Event \"?\"]\n[Site \"?\"]\n[Date \"????.??.??\"]\n[Round \"?\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 Nf6 2. Bc4 a5 3. Qh5 Nd5 4. Qxf7+ Kxf7 *",
+   "white": {
+    "username": "babadaniel",
+    "result": "resigned"
+   },
+   "black": {
+    "username": "Careless",
+    "result": "win"
+   }
+  }
+ ]
+}

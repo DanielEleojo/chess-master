@@ -148,7 +148,82 @@ export async function analyzeGame(
     endTime: game.end_time,
     evals,
     blunders: flagMoves(moves, evals, pvs, color),
-    book: bookWalk(moves.map((m) => m.san), color, repertoire),
+    // ponytail: sparring replays a book line by construction (014), so counting it
+    // would invent left-book and extension evidence he never produced.
+    book:
+      game.time_class === SPAR_TC
+        ? null
+        : bookWalk(moves.map((m) => m.san), color, repertoire),
+  }
+}
+
+// --- sparring games (014) ------------------------------------------------
+// A finished spar game is recorded as one of his games and nothing more: the
+// analysis list deals it, this same walk flags it, and from there the coach's
+// blunder clusters and the tactics deck's own-mistake cards read it with no
+// rung of their own. Never rated — the milestone ladder stays real ratings.
+export const SPAR_TC = 'sparring'
+
+export function sparGame(
+  c: Chess,
+  my: 'w' | 'b',
+  opp: string,
+  resigned: boolean,
+  atSec: number,
+): FullGame {
+  const drawn = !resigned && !c.isCheckmate()
+  const mine = resigned
+    ? 'resigned'
+    : drawn
+      ? c.isStalemate()
+        ? 'stalemate'
+        : c.isInsufficientMaterial()
+          ? 'insufficient'
+          : c.isThreefoldRepetition()
+            ? 'repetition'
+            : '50move'
+      : c.turn() !== my
+        ? 'win'
+        : 'checkmated'
+  const me = { username: USER, result: mine }
+  const them = { username: opp, result: drawn ? mine : mine === 'win' ? 'checkmated' : 'win' }
+  return {
+    uuid: `spar-${atSec}`,
+    time_class: SPAR_TC,
+    rated: false,
+    end_time: atSec,
+    rules: 'chess',
+    pgn: c.pgn(),
+    white: my === 'w' ? me : them,
+    black: my === 'w' ? them : me,
+  }
+}
+
+export async function loadSparGames(): Promise<FullGame[]> {
+  try {
+    const r = await fetch('/api/data/spar-games')
+    if (r.ok) {
+      const s = await r.json()
+      if (Array.isArray(s.games)) return s.games
+    }
+  } catch {
+    /* fall through */
+  }
+  return []
+}
+
+export async function saveSparGame(g: FullGame): Promise<void> {
+  const games = [...(await loadSparGames()), g]
+  await fetch('/api/data/spar-games', { method: 'PUT', body: JSON.stringify({ games }, null, 1) })
+  // unseen too, so the coach's top rung nags him to review it like a real arrival
+  try {
+    const st: { unseen?: string[] } = await fetch('/api/data/sync-state').then((r) =>
+      r.ok ? r.json() : {},
+    )
+    st.unseen = [...new Set([...(st.unseen ?? []), g.uuid])]
+    void fetch('/api/data/sync-state', { method: 'PUT', body: JSON.stringify(st, null, 1) })
+  } catch {
+    /* the game is stored; the badge is the only loss */
   }
 }
 

@@ -4,6 +4,7 @@ import type { Api } from 'chessground/api'
 import { Board, syncBoard } from '../components/Board'
 import { ModeHead } from '../components/ModeHead'
 import { startEngine, type Engine, type Weak } from '../lib/engine'
+import { saveSparGame, sparGame } from '../lib/analyze'
 import { beep } from '../lib/fx'
 import { sanUpto } from '../lib/drill'
 import type { Line } from '../lib/pgn'
@@ -122,7 +123,24 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
         ? 'Stalemate — draw.'
         : 'Draw.'
     if (won) promote()
+    record(false)
     return true
+  }
+
+  // The game goes where his real games go — analysis mode lists it, the same
+  // engine walk flags it, and the coach reads it from there. No new rung.
+  function record(resigned: boolean) {
+    const s = st.current
+    if (s.chess.history().length < 2) return // nothing worth walking
+    void saveSparGame(
+      sparGame(
+        s.chess,
+        s.my,
+        RUNGS[rungRef.current].name,
+        resigned,
+        Math.round(Date.now() / 1000),
+      ),
+    )
   }
 
   // Round 3: a beaten rung is retired for good — the ladder only ever goes up, so
@@ -349,6 +367,9 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
             >
               {s.over || (s.thinking ? 'thinking…' : 'Your move.')}
             </div>
+            {s.over && hist.length >= 2 && (
+              <div className="tiny dim">saved — the coach reads it in Game analysis</div>
+            )}
           </div>
           <div className="panel">
             <b>Strength</b>
@@ -385,7 +406,11 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
               </div>
             </div>
           )}
-          {live && <button onClick={() => ((s.over = 'You resigned.'), repaint())}>Resign</button>}
+          {live && (
+            <button onClick={() => ((s.over = 'You resigned.'), record(true), repaint())}>
+              Resign
+            </button>
+          )}
           <button className={live ? '' : 'primary'} onClick={() => setPlaying(false)}>
             New game
           </button>

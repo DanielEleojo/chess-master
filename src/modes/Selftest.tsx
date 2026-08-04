@@ -5,8 +5,8 @@ import { applyExtension, tailGrace } from '../lib/extend'
 import { makeDrill, userMoveIdxs } from '../lib/drill'
 import { buildDeck } from './TrapCards'
 import { bump, type Stat } from '../lib/history'
-import { describeGame, monthKey, newGames, type Game } from '../lib/sync'
-import { bookWalk, flagMoves } from '../lib/analyze'
+import { USER, describeGame, gameParts, monthKey, newGames, type Game } from '../lib/sync'
+import { SPAR_TC, bookWalk, flagMoves, sparGame } from '../lib/analyze'
 import { softmaxPick, startEngine } from '../lib/engine'
 import { RUNGS } from './Spar'
 import { computeFacts } from '../lib/facts'
@@ -288,6 +288,31 @@ export function Selftest({
     ok(`spar: the floor (temp ${RUNGS[0].temp}) hangs the -900cp move sometimes (${floor}/400)`, floor > 20 && floor < 200)
     const improver = roll(RUNGS[3].temp)
     ok(`spar: rungs are ordered — Improver hangs it far less (${improver}/400)`, improver < floor / 2)
+
+    // a finished spar game is recorded as one of his games, so the existing walk
+    // flags it and the coach reads it with no rung of its own
+    const spLoss = new Chess()
+    for (const s of ['f3', 'e5', 'g4', 'Qh4#']) spLoss.move(s)
+    const sg = sparGame(spLoss, 'w', 'Rookie', false, 1000)
+    ok(
+      'spar: game recorded as his own, unrated (milestone ladder stays real)',
+      sg.uuid === 'spar-1000' && sg.white.username === USER && sg.time_class === SPAR_TC && sg.rated === false,
+    )
+    ok(
+      'spar: being mated reads as a loss',
+      describeGame(sg) === 'You lost vs Rookie · sparring' && gameParts(sg).mark === '0',
+    )
+    const spBack = new Chess()
+    spBack.loadPgn(sg.pgn)
+    ok('spar: the game survives as pgn for the engine walk', spBack.history().join(' ') === 'f3 e5 g4 Qh4#')
+    const spWin = new Chess()
+    for (const s of ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#']) spWin.move(s)
+    ok('spar: his own mate reads as a win', gameParts(sparGame(spWin, 'w', 'Rookie', false, 1)).mark === '1')
+    ok('spar: resigning is a loss whatever the board says', gameParts(sparGame(spWin, 'w', 'Careless', true, 2)).mark === '0')
+    ok(
+      'spar: stalemate is a half point',
+      gameParts(sparGame(new Chess('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1'), 'b', 'Rookie', false, 3)).mark === '½',
+    )
 
     setOut(res)
     ;(async () => {
