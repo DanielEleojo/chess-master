@@ -17,7 +17,7 @@ const CAP = 1000 // clamp evals so mate-score swings don't explode
 
 export type FullGame = Game & { pgn: string; end_time: number; rules: string }
 
-export const ANALYSIS_V = 3 // bump when the stored shape or knobs change — stale caches re-analyze
+export const ANALYSIS_V = 4 // bump when the stored shape or knobs change — stale caches re-analyze
 
 export interface Blunder {
   ply: number // 0-based ply index of the flagged move
@@ -37,6 +37,8 @@ export interface BookInfo {
   leftAtPly: number | null // null = in book to the end of the line
   by: 'me' | 'opp' | null
   expectedSan: string | null // what the repertoire wanted, when I left it
+  oppSan: string | null // opponent's actually-played move at the break (019's branch/tail seed)
+  outlived: boolean // matched the whole line and the game kept going — tail candidate
 }
 
 export interface Analysis {
@@ -103,6 +105,9 @@ export function bookWalk(sans: string[], color: 'w' | 'b', lines: Line[]): BookI
     leftAtPly: ended ? null : n,
     by,
     expectedSan: by === 'me' ? line.moves[n].san : null,
+    // the game's move at ply n, when it exists and is the opponent's turn
+    oppSan: n < sans.length && (n % 2 === 0 ? 'w' : 'b') !== color ? sans[n] : null,
+    outlived: n >= line.moves.length && n < sans.length,
   }
 }
 

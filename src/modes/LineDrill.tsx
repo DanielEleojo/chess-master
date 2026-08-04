@@ -5,6 +5,7 @@ import type { Line } from '../lib/pgn'
 import { makeDrill, type Drill } from '../lib/drill'
 import { Board, syncBoard } from '../components/Board'
 import { beep, shake, useLater } from '../lib/fx'
+import { loadExt, saveExt, tailGrace, type ExtStore } from '../lib/extend'
 import { bump, byWeakness, saveHistory, type History } from '../lib/history'
 import { startEngine, type Engine } from '../lib/engine'
 import { computeFacts, sanLine } from '../lib/facts'
@@ -58,6 +59,7 @@ export function LineDrill({
   const [why, setWhy] = useState<Why>(null)
   const whyCtx = useRef<WhyCtx | null>(null)
   const engRef = useRef<Engine | null>(null)
+  const extRef = useRef<ExtStore | null>(null)
 
   const cg = useRef<Api | null>(null)
   const wrap = useRef<HTMLDivElement>(null)
@@ -68,6 +70,7 @@ export function LineDrill({
     attempts: 0,
     lm: null as [string, string] | null,
     missedThisLine: false,
+    minMissPly: Infinity, // lowest ply missed this pass — tail grace (019) needs it
     missedNames: new Set<string>(),
     ok: 0,
     tries: 0,
@@ -103,6 +106,7 @@ export function LineDrill({
     s.lm = null
     s.attempts = 0
     s.missedThisLine = false
+    s.minMissPly = Infinity
     cg.current!.setAutoShapes([])
     cg.current!.set({ orientation: line.trainAs === 'White' ? 'white' : 'black' })
     setCur(line)
@@ -165,7 +169,14 @@ export function LineDrill({
     const s = st.current
     s.linesDone++
     const line = lines[s.curIdx]
-    bump(history.lines, line.name, s.missedThisLine)
+    let missed = s.missedThisLine
+    // 019: freshly-extended plies are a cold start — the first miss landing
+    // beyond the pre-extension length goes unrecorded (teaching/requeue unchanged)
+    if (missed && extRef.current && tailGrace(extRef.current, line.name, s.minMissPly)) {
+      missed = false
+      saveExt(extRef.current)
+    }
+    bump(history.lines, line.name, missed)
     saveHistory(history)
     setPrompt({ text: 'Line complete ✓', cls: 'good' })
     paint()
@@ -197,6 +208,7 @@ export function LineDrill({
     } else {
       s.attempts++
       s.streak = 0
+      s.minMissPly = Math.min(s.minMissPly, s.drill.i)
       beep(false)
       shake(wrap.current)
       if (!s.missedThisLine && !s.queue.includes(s.curIdx)) s.queue.splice(2, 0, s.curIdx)
@@ -249,6 +261,7 @@ export function LineDrill({
   useEffect(() => {
     ;(window as any).cmExpected = () => // dev hook, pairs with cmMove
       st.current.drill && !st.current.drill.done() ? st.current.drill.expected() : null
+    void loadExt().then((e) => (extRef.current = e))
     nextLine()
     return () => engRef.current?.quit()
     // eslint-disable-next-line react-hooks/exhaustive-deps

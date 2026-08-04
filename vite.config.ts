@@ -11,6 +11,24 @@ function dataApi(): Plugin {
   return {
     name: 'data-api',
     configureServer(server) {
+      // PUT /api/repertoire — accepted line extensions (020) rewrite the PGN;
+      // the client validated by re-parsing, git catches anything else.
+      server.middlewares.use('/api/repertoire', (req, res) => {
+        if (req.method !== 'PUT') {
+          res.statusCode = 405
+          return res.end()
+        }
+        let body = ''
+        req.on('data', (c) => (body += c))
+        req.on('end', () => {
+          if (!body.includes('[Event ')) {
+            res.statusCode = 400
+            return res.end('not pgn')
+          }
+          fs.writeFileSync(path.join(DATA, 'repertoire.pgn'), body)
+          res.end('ok')
+        })
+      })
       server.middlewares.use('/api/data', (req, res) => {
         const name = (req.url ?? '').split('?')[0].slice(1)
         if (name === 'archives' && req.method === 'GET') {

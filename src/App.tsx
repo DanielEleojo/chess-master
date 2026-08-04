@@ -127,7 +127,7 @@ export default function App() {
     <div className="home">
       <h1>Chess Master</h1>
       <div className="sub">openings first — the rest hangs off this</div>
-      <CoachCard history={h} unseen={unseenN} onGo={go} />
+      <CoachCard history={h} unseen={unseenN} lines={lines} onGo={go} />
       <div className="modes">
         <button className="modecard" onClick={() => go('lines')}>
           <h2>Line drill</h2>

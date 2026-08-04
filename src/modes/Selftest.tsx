@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Chess } from 'chess.js'
-import type { Line } from '../lib/pgn'
+import { parseGames, type Line } from '../lib/pgn'
+import { applyExtension, tailGrace } from '../lib/extend'
 import { makeDrill, userMoveIdxs } from '../lib/drill'
 import { buildDeck } from './TrapCards'
 import { bump, type Stat } from '../lib/history'
@@ -22,7 +23,8 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     const res: string[] = []
     const ok = (name: string, cond: boolean) => res.push((cond ? 'PASS' : 'FAIL') + '  ' + name)
 
-    ok(`repertoire parsed: ${lines.length} lines (expect 22)`, lines.length === 22)
+    // ≥: accepted line extensions (020) legitimately grow the repertoire
+    ok(`repertoire parsed: ${lines.length} lines (expect >= 22)`, lines.length >= 22)
     ok(`traps parsed: ${traps.length} traps (expect 15)`, traps.length === 15)
     for (const l of [...lines, ...traps])
       ok(
@@ -30,7 +32,7 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
         l.moves.length >= 2 && userMoveIdxs(l).length >= 1,
       )
     const commented = lines.filter((l) => Object.keys(l.comments).length > 0).length
-    ok(`repertoire why-comments survive parsing (${commented} lines have them)`, commented === 22)
+    ok(`repertoire why-comments survive parsing (${commented} lines have them)`, commented === lines.length)
     // every miss must teach: each drillable user move carries a why-comment
     const bare = lines.flatMap((l) =>
       userMoveIdxs(l).filter((j) => !l.comments[l.moves[j].after]).map((j) => `${l.name}#${j}`),
@@ -97,13 +99,16 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     const book = [mkLine(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], 'White'), mkLine(['e4', 'c5', 'Nf3'], 'White')]
     const whole = bookWalk(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5'], 'w', book)
     ok('book: full-line match ends in book', whole?.leftAtPly === null && whole.matchedPlies === 5)
+    ok('book: outlived line carries the opponent continuation (020)', whole?.outlived === true && whole.oppSan === 'Bc5')
+    const covered = bookWalk(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], 'w', book)
+    ok('book: game ending inside the line is not outlived', covered?.outlived === false && covered.oppSan === null)
     const meLeft = bookWalk(['e4', 'c5', 'Nc3'], 'w', book)
     ok(
       'book: my deviation flagged with expected move',
       meLeft?.leftAtPly === 2 && meLeft.by === 'me' && meLeft.expectedSan === 'Nf3',
     )
     const oppLeft = bookWalk(['e4', 'd5'], 'w', book)
-    ok('book: opponent deviation flagged', oppLeft?.leftAtPly === 1 && oppLeft.by === 'opp')
+    ok('book: opponent deviation flagged with their move (020)', oppLeft?.leftAtPly === 1 && oppLeft.by === 'opp' && oppLeft.oppSan === 'd5')
     ok('book: never-in-book is null', bookWalk(['d4', 'd5'], 'w', book) === null)
 
     // analysis: blunder flagging on hand-made evals
@@ -149,7 +154,11 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
       uuid: 'u', at: '', v: 3, ms: 300, color: 'w', desc: '', endTime: 0, evals: [], blunders: [], book: null, ...over,
     })
     const leftBook = (line: string): Analysis =>
-      mkA({ book: { line, matchedPlies: 4, leftAtPly: 4, by: 'me', expectedSan: 'Bc4' } })
+      mkA({ book: { line, matchedPlies: 4, leftAtPly: 4, by: 'me', expectedSan: 'Bc4', oppSan: null, outlived: false } })
+    const oppBook = (line: string, oppSan = 'd5', ply = 4): Analysis =>
+      mkA({ book: { line, matchedPlies: ply, leftAtPly: ply, by: 'opp', expectedSan: null, oppSan, outlived: false } })
+    const outBook = (line: string): Analysis =>
+      mkA({ book: { line, matchedPlies: 6, leftAtPly: null, by: null, expectedSan: null, oppSan: 'c4', outlived: true } })
     const blunderAt = (ply: number): Analysis =>
       mkA({ blunders: [{ ply, san: '', fen: '', best: '', bestSan: '', pvSan: [], punishSan: [], swingCp: 300, severity: 'blunder' }] })
     ok('coach: unseen games top the ladder', pickNext(3, [leftBook('X'), leftBook('X')], emptyHistory()).kind === 'new-games')
@@ -163,6 +172,39 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     const pWeak = pickNext(0, [], wh)
     ok('coach: weak drill stat picked with evidence', pWeak.kind === 'weak-drill' && pWeak.focusLine === 'Italian main line' && pWeak.evidence[0].includes('4 of 6'))
     ok('coach: clean data falls back to default reps', pickNext(0, [], emptyHistory()).kind === 'default')
+
+    // line extension (tickets 019/020) — trigger, rung, dismissal, grace, PGN append
+    const pBr = pickNext(0, [oppBook('X'), oppBook('X')], emptyHistory())
+    ok('extend: opp-left same break twice proposes a branch', pBr.kind === 'extend' && pBr.ext?.kind === 'branch' && pBr.ext.oppSan === 'd5')
+    ok('extend: one surprise is not a trigger', pickNext(0, [oppBook('X')], emptyHistory()).kind !== 'extend')
+    ok('extend: different moves at the break do not pool', pickNext(0, [oppBook('X', 'd5'), oppBook('X', 'c5')], emptyHistory()).kind !== 'extend')
+    const pTail = pickNext(0, [outBook('Y'), outBook('Y')], emptyHistory())
+    ok('extend: outlived line twice proposes a tail', pTail.kind === 'extend' && pTail.ext?.kind === 'tail' && pTail.ext.ply === 6)
+    ok('extend: daniel-left rung outranks extension', pickNext(0, [leftBook('X'), leftBook('X'), outBook('Y'), outBook('Y')], emptyHistory()).kind === 'left-line')
+    const dis = { dismissed: [{ line: 'Y', ply: 6, oppSan: 'c4', games: 2 }], preLen: {} }
+    ok('extend: dismissed break sleeps', pickNext(0, [outBook('Y'), outBook('Y')], emptyHistory(), dis).kind !== 'extend')
+    ok('extend: a new game re-hitting the break re-proposes', pickNext(0, [outBook('Y'), outBook('Y'), outBook('Y')], emptyHistory(), dis).kind === 'extend')
+
+    const ge = { dismissed: [], preLen: { Z: 4 } }
+    ok('extend: miss on old plies is not graced', !tailGrace(ge, 'Z', 2) && ge.preLen.Z === 4)
+    ok('extend: first miss beyond pre-extension length graced once', tailGrace(ge, 'Z', 5) && !tailGrace(ge, 'Z', 5))
+    ok('extend: unextended line never graced', !tailGrace(ge, 'Q', 9))
+
+    const rawRep =
+      '[Event "Repertoire: T1"]\n[System "T"]\n[TrainAs "White"]\n[Result "*"]\n\n1. e4 {why e4} e5 2. Nf3 {why Nf3} *'
+    const tLine = parseGames(rawRep)[0]
+    const tOut = applyExtension(rawRep, tLine, { line: 'T1', ply: 3, oppSan: 'Nc6', kind: 'tail', games: 2 }, ['Nc6', 'Bc4'])
+    const tp = parseGames(tOut)
+    ok('extend: tail rewrites the line in place', tp.length === 1 && tp[0].name === 'T1' && tp[0].moves.length === 5 && tp[0].moves[4].san === 'Bc4')
+    ok('extend: old why-comments survive the rewrite', tp[0]?.comments[tp[0].moves[0].after] === 'why e4')
+    ok('extend: new user plies carry a why', !!tp[0]?.comments[tp[0].moves[4].after])
+    const bOut = applyExtension(rawRep, tLine, { line: 'T1', ply: 1, oppSan: 'c5', kind: 'branch', games: 2 }, ['c5', 'Nf3', 'd6', 'd4'])
+    const bp = parseGames(bOut)
+    ok(
+      'extend: branch appends a new line sharing the prefix',
+      bp.length === 2 && bp[1].name === 'T1 (c5 branch)' && bp[1].moves.map((m) => m.san).join(' ') === 'e4 c5 Nf3 d6 d4',
+    )
+    ok('extend: branch user plies carry a why', bp.length === 2 && userMoveIdxs(bp[1]).every((j) => !!bp[1].comments[bp[1].moves[j].after]))
     const gr = (t: number, rating: number, tc = 'rapid'): Game => ({
       uuid: String(t), time_class: tc, rated: true, end_time: t,
       white: { username: 'BabaDaniel', result: 'win', rating },

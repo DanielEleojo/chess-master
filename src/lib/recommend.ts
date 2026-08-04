@@ -4,6 +4,7 @@
 // real ratings from the synced archives. Every pick carries its evidence; the
 // LLM voice (coach.ts) only phrases what this file decides.
 import type { Analysis } from './analyze'
+import { emptyExt, findExtension, type ExtStore, type ExtTrigger } from './extend'
 import type { History, Stat } from './history'
 import { USER, type Game } from './sync'
 
@@ -13,14 +14,20 @@ export const CLUSTER_MIN = 3 // ≥3 flagged moves land in the same game phase
 export const WEAK_STAT_MIN = 2 // ≥2 recorded misses at ≥1/3 miss rate
 
 export interface Pick {
-  kind: 'new-games' | 'left-line' | 'blunder-cluster' | 'weak-drill' | 'default'
+  kind: 'new-games' | 'left-line' | 'extend' | 'blunder-cluster' | 'weak-drill' | 'default'
   mode: 'analysis' | 'lines' | 'traps'
   title: string
   evidence: string[] // the facts backing the pick — shown raw, fed to the voice
   focusLine?: string // line drill deals this line first
+  ext?: ExtTrigger // extend picks: the break to propose plies for (019/020)
 }
 
-export function pickNext(unseen: number, analyses: Analysis[], h: History): Pick {
+export function pickNext(
+  unseen: number,
+  analyses: Analysis[],
+  h: History,
+  ext: ExtStore = emptyExt(),
+): Pick {
   if (unseen > 0)
     return {
       kind: 'new-games',
@@ -51,6 +58,28 @@ export function pickNext(unseen: number, analyses: Analysis[], h: History): Pick
         `you left this line early in ${e.n} of ${analyses.length} analyzed games`,
         `around move ${Math.floor(e.ply / 2) + 1} the line wants ${e.expected ?? 'a different move'}`,
       ],
+    }
+  }
+
+  // a break the repertoire keeps hitting (019/020): propose growing the line
+  const ex = findExtension(analyses, ext)
+  if (ex) {
+    const mv = Math.floor(ex.ply / 2) + 1
+    return {
+      kind: 'extend',
+      mode: 'lines',
+      focusLine: ex.line,
+      title:
+        ex.kind === 'branch'
+          ? `Extend "${ex.line}" to cover ${ex.oppSan}`
+          : `Extend "${ex.line}" — it ends too early`,
+      evidence:
+        ex.kind === 'branch'
+          ? [
+              `opponents met move ${mv} of this line with ${ex.oppSan} in ${ex.games} analyzed games — your book has no answer`,
+            ]
+          : [`${ex.games} analyzed games matched this line to its end and kept going`],
+      ext: ex,
     }
   }
 
