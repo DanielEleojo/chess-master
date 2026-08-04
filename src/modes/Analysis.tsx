@@ -14,9 +14,12 @@ import {
   saveAnalyses,
   type Analysis as GameAnalysis,
   type AnalysisStore,
+  type Blunder,
   type BookInfo,
   type FullGame,
 } from '../lib/analyze'
+import { computeFacts } from '../lib/facts'
+import { coachSay } from '../lib/coach'
 
 const START_FEN = new Chess().fen()
 
@@ -32,6 +35,48 @@ function bookSentence(b: BookInfo | null): string {
   return b.by === 'me'
     ? `You left “${b.line}” at move ${mvNo} — repertoire wanted ${b.expectedSan}.`
     : `Opponent left “${b.line}” at move ${mvNo} — on your own from there.`
+}
+
+// The 017 explanation: facts render instantly, the coach voice swaps in when
+// Ollama answers (or never does — facts stand alone by design, ADR 0001).
+function CoachNote({ a, bl }: { a: GameAnalysis; bl: Blunder }) {
+  const facts = useMemo(
+    () =>
+      computeFacts({
+        fen: bl.fen,
+        played: bl.san,
+        best: bl.bestSan,
+        bestLine: bl.pvSan ?? [],
+        punishLine: bl.punishSan ?? [],
+        swingCp: bl.swingCp,
+      }),
+    [bl],
+  )
+  const [prose, setProse] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState(true)
+  useEffect(() => {
+    let live = true
+    setProse(null)
+    setWaiting(true)
+    const ctx = `In his game (${a.desc}), playing ${a.color === 'w' ? 'White' : 'Black'}, on move ${Math.floor(bl.ply / 2) + 1} he played ${bl.san}; the engine prefers ${bl.bestSan}.`
+    coachSay(`${a.uuid}:${bl.ply}`, ctx, facts).then((t) => {
+      if (!live) return
+      setProse(t)
+      setWaiting(false)
+    })
+    return () => {
+      live = false
+    }
+  }, [a, bl, facts])
+  return (
+    <div className="panel">
+      <b>Coach on {bl.san}</b>
+      <div style={{ marginTop: 4 }}>{prose ?? facts.join(' ')}</div>
+      <div className="tiny dim" style={{ marginTop: 4 }}>
+        {waiting ? 'coach voice thinking…' : prose ? 'coach voice' : 'coach voice offline — facts only'}
+      </div>
+    </div>
+  )
 }
 
 // The 016 rough take: pick a game, the engine walks it (~70ms/position),
@@ -196,6 +241,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
 
   // ---- one game ----
   const flagOf = (j: number) => analysis?.blunders.find((b) => b.ply === j)
+  const blCur = flagOf(p)
   const blunderCount = analysis?.blunders.filter((b) => b.severity === 'blunder').length ?? 0
   const mistakeCount = (analysis?.blunders.length ?? 0) - blunderCount
   return (
@@ -248,6 +294,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
                 ))}
               </ul>
             </div>
+            {blCur && <CoachNote a={analysis} bl={blCur} />}
             <div className="panel movelist">
               {moves.map((m, j) => {
                 const f = flagOf(j)

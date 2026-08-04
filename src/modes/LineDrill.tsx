@@ -1,10 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
+import { Chess, type Move } from 'chess.js'
 import type { Api } from 'chessground/api'
 import type { Line } from '../lib/pgn'
 import { makeDrill, type Drill } from '../lib/drill'
 import { Board, syncBoard } from '../components/Board'
 import { beep, shake, useLater } from '../lib/fx'
 import { bump, byWeakness, saveHistory, type History } from '../lib/history'
+import { startEngine, type Engine } from '../lib/engine'
+import { computeFacts, sanLine } from '../lib/facts'
+import { coachSay } from '../lib/coach'
+
+// "why not my move?" (017) — never automatic, the engine only runs on click
+const WHY_MS = 500 // engine time per side of the tried-vs-line comparison
+type Why = null | 'offer' | 'busy' | { text: string; tag: string }
+interface WhyCtx {
+  fen: string // position before the miss
+  tried: Move
+  exp: Move
+  name: string
+  as: 'White' | 'Black'
+  cmt: string | undefined // the line's why-comment for the expected move
+}
 
 const PIECE: Record<string, string> = {
   p: 'pawn',
@@ -37,6 +53,9 @@ export function LineDrill({
   const [totals, setTotals] = useState({ linesDone: 0, ok: 0, tries: 0 })
   const [nextUp, setNextUp] = useState<{ name: string; missed: boolean }[]>([])
   const [over, setOver] = useState(false)
+  const [why, setWhy] = useState<Why>(null)
+  const whyCtx = useRef<WhyCtx | null>(null)
+  const engRef = useRef<Engine | null>(null)
 
   const cg = useRef<Api | null>(null)
   const wrap = useRef<HTMLDivElement>(null)
@@ -84,8 +103,45 @@ export function LineDrill({
     setMissedBadge(st.current.missedNames.has(line.name))
     setPrompt({ text: '', cls: '' })
     setCoach('')
+    whyCtx.current = null
+    setWhy(null)
     paint()
     handOver()
+  }
+
+  async function explainMiss() {
+    const w = whyCtx.current
+    if (!w) return
+    setWhy('busy')
+    const eng = (engRef.current ??= startEngine())
+    const cA = new Chess(w.fen)
+    cA.move(w.tried.san)
+    const cB = new Chess(w.fen)
+    cB.move(w.exp.san)
+    const [a, b] = await Promise.all([eng.evalFen(cA.fen(), WHY_MS), eng.evalFen(cB.fen(), WHY_MS)])
+    if (whyCtx.current !== w) return // a new miss (or a hit) superseded this one
+    // scores come from the opponent's side after each move; my swing = a.cp − b.cp
+    const swing = a.cp - b.cp
+    let facts = computeFacts({
+      fen: w.fen,
+      played: w.tried.san,
+      best: w.exp.san,
+      bestLine: [w.exp.san, ...sanLine(cB.fen(), b.pv, 4)],
+      punishLine: sanLine(cA.fen(), a.pv, 5),
+      swingCp: Math.max(0, swing),
+    })
+    // shallow engine often shrugs at repertoire deviations — then the honest
+    // answer is discipline, not tactics
+    if (swing < 30)
+      facts = [
+        `${w.tried.san} isn't losing by the engine — but drilling means one answer: ${w.exp.san}.${w.cmt ? ' ' + w.cmt : ''}`,
+      ]
+    setWhy({ text: facts.join(' '), tag: 'coach voice thinking…' })
+    const ctx = `While drilling the repertoire line "${w.name}" as ${w.as}, he tried ${w.tried.san}; the repertoire move is ${w.exp.san}.${w.cmt ? ` The line's note on ${w.exp.san}: "${w.cmt}"` : ''}`
+    const prose = await coachSay(`drill:${w.fen}:${w.tried.san}`, ctx, facts)
+    if (whyCtx.current !== w) return
+    if (prose) setWhy({ text: prose, tag: 'coach voice' })
+    else setWhy({ text: facts.join(' '), tag: 'coach voice offline — facts only' })
   }
 
   function handOver() {
@@ -128,6 +184,8 @@ export function LineDrill({
       const cmt = line.comments[r.exp.after]
       setCoach(cmt ? `✓ ${r.exp.san} — ${cmt}` : '')
       setPrompt({ text: '', cls: '' })
+      whyCtx.current = null
+      setWhy(null)
       if (s.drill.done()) later(450, lineDone)
       else later(350, handOver)
     } else {
@@ -140,6 +198,17 @@ export function LineDrill({
       s.missedNames.add(line.name)
       const got = r.got ? r.got.san : 'that'
       const cmt = line.comments[r.exp.after]
+      if (r.got) {
+        whyCtx.current = {
+          fen: s.drill.chess.fen(), // tryMove undid the miss — this is the before-position
+          tried: r.got,
+          exp: r.exp,
+          name: line.name,
+          as: line.trainAs,
+          cmt,
+        }
+        setWhy('offer')
+      }
       if (s.attempts === 1) {
         setCoach(
           cmt
@@ -175,6 +244,7 @@ export function LineDrill({
     ;(window as any).cmExpected = () => // dev hook, pairs with cmMove
       st.current.drill && !st.current.drill.done() ? st.current.drill.expected() : null
     nextLine()
+    return () => engRef.current?.quit()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -196,6 +266,18 @@ export function LineDrill({
         </div>
         <div className={'prompt ' + prompt.cls}>{prompt.text}</div>
         <div className="coach">{coach}</div>
+        {why === 'offer' && (
+          <button className="tiny" onClick={explainMiss}>
+            why not my move?
+          </button>
+        )}
+        {why === 'busy' && <div className="tiny dim">engine checking your move…</div>}
+        {why !== null && typeof why === 'object' && (
+          <div className="panel" style={{ marginTop: 6 }}>
+            {why.text}
+            <div className="tiny dim" style={{ marginTop: 4 }}>{why.tag}</div>
+          </div>
+        )}
       </div>
       <div className="side">
         <div className="streakbox">

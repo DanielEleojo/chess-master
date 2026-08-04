@@ -5,6 +5,7 @@
 // is the left-book signal the opening trainer's depth extension (003) reads.
 import { Chess, type Move } from 'chess.js'
 import type { Line } from './pgn'
+import { sanLine } from './facts'
 import { USER, describeGame, type Game } from './sync'
 import type { Engine } from './engine'
 
@@ -16,7 +17,7 @@ const CAP = 1000 // clamp evals so mate-score swings don't explode
 
 export type FullGame = Game & { pgn: string; end_time: number; rules: string }
 
-export const ANALYSIS_V = 2 // bump when the stored shape or knobs change — stale caches re-analyze
+export const ANALYSIS_V = 3 // bump when the stored shape or knobs change — stale caches re-analyze
 
 export interface Blunder {
   ply: number // 0-based ply index of the flagged move
@@ -25,6 +26,7 @@ export interface Blunder {
   best: string // uci
   bestSan: string
   pvSan: string[] // best move plus its follow-up — the why in moves
+  punishSan: string[] // opponent's best line after the played move — what facts.ts walks (017)
   swingCp: number
   severity: 'blunder' | 'mistake'
 }
@@ -65,14 +67,7 @@ export function flagMoves(
       color === 'w' ? clamp(evals[j]) - clamp(evals[j + 1]) : clamp(evals[j + 1]) - clamp(evals[j])
     if (swing < MISTAKE_CP) return
     const pv = pvs[j] ?? []
-    const pvSan: string[] = []
-    try {
-      const t = new Chess(m.before)
-      for (const u of pv.slice(0, 5))
-        pvSan.push(t.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] }).san)
-    } catch {
-      /* keep whatever parsed */
-    }
+    const pvSan = sanLine(m.before, pv, 5)
     out.push({
       ply: j,
       san: m.san,
@@ -80,6 +75,7 @@ export function flagMoves(
       best: pv[0] ?? '',
       bestSan: pvSan[0] ?? '?',
       pvSan,
+      punishSan: sanLine(m.after, pvs[j + 1] ?? [], 5),
       swingCp: swing,
       severity: swing >= BLUNDER_CP ? 'blunder' : 'mistake',
     })

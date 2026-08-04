@@ -2433,6 +2433,34 @@
     "uuid": "8c4eed4c-7c97-11df-8058-000000000000"
    },
    "eco": "https://www.chess.com/openings/Italian-Game"
+  },
+  {
+   "url": "https://www.chess.com/game/live/172505508770",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2026.08.04\"]\n[Round \"-\"]\n[White \"larry6208\"]\n[Black \"BabaDaniel\"]\n[Result \"1-0\"]\n[CurrentPosition \"3rkr2/pp3p1p/5B2/2b2b2/2B5/2P1PP2/P5PP/R4RK1 b - - 2 16\"]\n[Timezone \"UTC\"]\n[ECO \"D02\"]\n[ECOUrl \"https://www.chess.com/openings/London-System-3...c6-4.e3-Bf5-5.c4\"]\n[UTCDate \"2026.08.04\"]\n[UTCTime \"07:57:16\"]\n[WhiteElo \"176\"]\n[BlackElo \"164\"]\n[TimeControl \"60\"]\n[Termination \"larry6208 won on time\"]\n[StartTime \"07:57:16\"]\n[EndDate \"2026.08.04\"]\n[EndTime \"07:58:43\"]\n[Link \"https://www.chess.com/game/live/172505508770\"]\n\n1. d4 {[%clk 0:00:59.6]} 1... c6 {[%clk 0:00:59.7]} 2. Bf4 {[%clk 0:00:58.3]} 2... d5 {[%clk 0:00:57.6]} 3. Nf3 {[%clk 0:00:57.9]} 3... Nf6 {[%clk 0:00:52.7]} 4. e3 {[%clk 0:00:57]} 4... Bf5 {[%clk 0:00:48.5]} 5. c4 {[%clk 0:00:55.9]} 5... dxc4 {[%clk 0:00:45.4]} 6. Bxc4 {[%clk 0:00:54.9]} 6... e6 {[%clk 0:00:41.3]} 7. O-O {[%clk 0:00:53.2]} 7... Nbd7 {[%clk 0:00:34.3]} 8. Nc3 {[%clk 0:00:52.2]} 8... e5 {[%clk 0:00:28.9]} 9. Nxe5 {[%clk 0:00:51.3]} 9... Nxe5 {[%clk 0:00:23.7]} 10. Bxe5 {[%clk 0:00:50.2]} 10... Ne4 {[%clk 0:00:18.6]} 11. f3 {[%clk 0:00:46.2]} 11... Nxc3 {[%clk 0:00:14.4]} 12. bxc3 {[%clk 0:00:45.3]} 12... c5 {[%clk 0:00:11.6]} 13. dxc5 {[%clk 0:00:42.4]} 13... Bxc5 {[%clk 0:00:09.4]} 14. Qxd8+ {[%clk 0:00:40.2]} 14... Rxd8 {[%clk 0:00:06]} 15. Bxg7 {[%clk 0:00:39.8]} 15... Rf8 {[%clk 0:00:02.3]} 16. Bf6 {[%clk 0:00:38.7]} 1-0\n",
+   "time_control": "60",
+   "end_time": 1785830323,
+   "rated": true,
+   "tcn": "lBYQcDZJgv!Tmu6LkAJAfA0Seg5ZbsSKvKZKDKTCnvCsjsQIBI9Id747K2?92T",
+   "uuid": "1c0b975b-8fda-11f1-8a72-93bfcf01000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "3rkr2/pp3p1p/5B2/2b2b2/2B5/2P1PP2/P5PP/R4RK1 b - - 2 16",
+   "time_class": "bullet",
+   "rules": "chess",
+   "white": {
+    "rating": 176,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/larry6208",
+    "username": "larry6208",
+    "uuid": "7c0d04f2-e747-11ea-9ed2-73a97f2272cd"
+   },
+   "black": {
+    "rating": 164,
+    "result": "timeout",
+    "@id": "https://api.chess.com/pub/player/babadaniel",
+    "username": "BabaDaniel",
+    "uuid": "5a3bec8c-a638-11ed-8b07-1f25fa05a300"
+   },
+   "eco": "https://www.chess.com/openings/London-System-3...c6-4.e3-Bf5-5.c4"
   }
  ]
 }

@@ -7,6 +7,8 @@ import { bump, type Stat } from '../lib/history'
 import { describeGame, monthKey, newGames, type Game } from '../lib/sync'
 import { bookWalk, flagMoves } from '../lib/analyze'
 import { startEngine } from '../lib/engine'
+import { computeFacts } from '../lib/facts'
+import { MODEL, coachUp } from '../lib/coach'
 
 // Ported from the prototype's ?selftest=1 — same logic checks, now against the
 // fetched real seed files, plus a middleware round-trip. The app's one check.
@@ -115,6 +117,29 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
     const bFlags = flagMoves(bm, [0, 0, 150, 150], [[], ['d7d5'], [], []], 'b')
     ok('blunder: black swing sign handled, 150cp = mistake', bFlags.length === 1 && bFlags[0].ply === 1 && bFlags[0].severity === 'mistake')
     ok('blunder: quiet moves stay unflagged', flagMoves(bm, [20, 25, 20, 30], [[], [], [], []], 'w').length === 0)
+    const pFlags = flagMoves(bm, [20, 30, 20, -250], [[], [], ['g1f3'], ['d8h4']], 'w')
+    ok('blunder: punish line stored in san (017 facts input)', pFlags[0]?.punishSan.join(' ') === 'Qh4')
+
+    // fact layer (ticket 017, ADR 0001) — the deterministic truths under the coach voice
+    const fool = new Chess()
+    fool.move('f3'), fool.move('e5')
+    const fMate = computeFacts({ fen: fool.fen(), played: 'g4', best: 'd4', bestLine: ['d4'], punishLine: ['Qh4#'], swingCp: 9900 })
+    ok('facts: mate in the punish line reported', fMate.some((s) => s.includes('checkmate')))
+    const hq = new Chess()
+    for (const s of ['e4', 'e5', 'Qh5', 'Nc6']) hq.move(s)
+    const fHang = computeFacts({ fen: hq.fen(), played: 'Qxe5+', best: 'Nc3', bestLine: ['Nc3'], punishLine: ['Nxe5'], swingCp: 780 })
+    ok('facts: hung queen reported', fHang.some((s) => s.includes('queen') && s.includes('takes it')))
+    const fFork = computeFacts({ fen: '6k1/8/8/2b5/8/8/PR3R2/6K1 w - - 0 1', played: 'a3', best: 'Rb5', bestLine: ['Rb5'], punishLine: ['Bd4', 'a4', 'Bxb2'], swingCp: 300 })
+    ok('facts: fork spotted', fFork.some((s) => s.includes('forks both your rooks')))
+    ok('facts: material along the punish line', fFork.some((s) => s.includes('wins your rook')))
+    const cstl = new Chess()
+    cstl.move('e4'), cstl.move('e5')
+    const fK = computeFacts({ fen: cstl.fen(), played: 'Ke2', best: 'Nf3', bestLine: ['Nf3'], punishLine: ['Nc6'], swingCp: 40 })
+    ok('facts: bare king move loses castling', fK.some((s) => s.includes('castling')))
+    const fBest = computeFacts({ fen: (() => { const c = new Chess(); c.move('e4'), c.move('d5'); return c.fen() })(), played: 'a3', best: 'exd5', bestLine: ['exd5'], punishLine: ['dxe4'], swingCp: 120 })
+    ok('facts: best-line material win reported', fBest.some((s) => s.includes('exd5 wins a pawn')))
+    const fQuiet = computeFacts({ fen: new Chess().fen(), played: 'a3', best: 'e4', bestLine: ['e4'], punishLine: ['e5'], swingCp: 60 })
+    ok('facts: quiet miss falls back to positional', fQuiet.length === 1 && fQuiet[0].includes('positional'))
 
     setOut(res)
     ;(async () => {
@@ -155,6 +180,9 @@ export function Selftest({ lines, traps }: { lines: Line[]; traps: Line[] }) {
         /* stays false */
       }
       setOut((o) => [...o, (engineOk ? 'PASS' : 'FAIL') + '  stockfish worker evals startpos'])
+      // coach voice (017): reachability is informational — facts-only fallback is by design
+      const up = await coachUp()
+      setOut((o) => [...o, `PASS  coach voice: ollama ${up ? `reachable (${MODEL})` : 'down — facts-only fallback active'}`])
     })()
   }, [lines, traps])
 
