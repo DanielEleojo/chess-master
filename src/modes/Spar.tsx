@@ -2,27 +2,29 @@ import { useEffect, useRef, useState } from 'react'
 import { Chess } from 'chess.js'
 import type { Api } from 'chessground/api'
 import { Board, syncBoard } from '../components/Board'
-import { startEngine, type Engine } from '../lib/engine'
+import { startEngine, type Engine, type Weak } from '../lib/engine'
 import { beep } from '../lib/fx'
 import { sanUpto } from '../lib/drill'
 import type { Line } from '../lib/pgn'
 
-// Sparring — ticket 014's ROUGH TAKE, built to be reacted to, not to be right.
-// Every number below is the open question: how many rungs, named how, varying what.
+// Sparring — ticket 014's rough take, built to be reacted to, not to be right.
 //
-// ponytail: strength is (Skill Level, nodes) only. Stockfish's Skill Level already
-// randomises its own pick, so 002's MultiPV softmax buys nothing — add it only if a
-// rung plays robotically. No clock either: elapsed counts up, nothing flags.
-export const RUNGS = [
-  // measured: even 1 node defends scholar's mate — Stockfish's move ordering alone
-  // plays sensibly, so this floor may still be too high. If it is, the fix is
-  // randomising among the top few moves (002's MultiPV softmax) — not a smaller cap.
-  { name: 'Careless', skill: 0, nodes: 1, blurb: 'no thought at all — the floor' },
-  { name: 'Rookie', skill: 0, nodes: 40, blurb: 'one move ahead, walks into your threats' },
-  { name: 'Beginner', skill: 0, nodes: 400, blurb: 'takes what you leave hanging, no plan' },
-  { name: 'Improver', skill: 3, nodes: 4000, blurb: 'punishes loose pieces, spots short tactics' },
-  { name: 'Club player', skill: 6, nodes: 40000, blurb: 'you need a real idea to beat this' },
+// Round 2: starving the search (nodes 1) did NOT make it weak — Stockfish's move
+// ordering defends scholar's mate on one node. Daniel still lost to the floor, so
+// 002's MultiPV softmax is now the dial: search wide enough to *have* candidates,
+// then pick sloppily among them. `temp` (centipawns) is the sloppiness.
+export const RUNGS: (Weak & { name: string; blurb: string })[] = [
+  { name: 'Careless', nodes: 500, multipv: 8, temp: 900, blurb: 'hangs pieces for free — the floor' },
+  { name: 'Rookie', nodes: 500, multipv: 6, temp: 350, blurb: 'blunders often, misses your threats' },
+  { name: 'Beginner', nodes: 800, multipv: 4, temp: 140, blurb: 'takes what you leave hanging, no plan' },
+  { name: 'Improver', nodes: 4000, multipv: 3, temp: 55, blurb: 'punishes loose pieces, spots short tactics' },
+  { name: 'Club player', nodes: 40000, multipv: 1, temp: 0, blurb: 'always its best move — you need a real idea' },
 ]
+
+const knobs = (r: Weak) =>
+  r.temp === 0
+    ? `${r.nodes} nodes · always best`
+    : `${r.nodes} nodes · top ${r.multipv}, ±${r.temp}cp sloppy`
 
 const mmss = (ms: number) =>
   Math.floor(ms / 60000) + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0')
@@ -84,7 +86,7 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
     repaint()
     const eng = (engRef.current ??= startEngine())
     const r = RUNGS[rungRef.current]
-    const uci = await eng.playFen(s.chess.fen(), r.skill, r.nodes)
+    const uci = await eng.playFen(s.chess.fen(), r)
     if (id !== s.id) return
     s.thinking = false
     if (uci) {
@@ -163,9 +165,7 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
               >
                 {i === rung ? '● ' : '○ '}
                 <b>{r.name}</b> — {r.blurb}{' '}
-                <span className="tiny dim">
-                  (skill {r.skill} · {r.nodes} nodes)
-                </span>
+                <span className="tiny dim">({knobs(r)})</span>
               </button>
             ))}
           </div>
@@ -199,8 +199,8 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
             )}
           </div>
           <div className="tiny dim" style={{ marginTop: 12 }}>
-            If even the bottom rung beats you every time, say so — the fix is making it
-            pick randomly among its top moves, not thinking less.
+            The bottom rungs now play sloppily on purpose — they see the good move and
+            pick a worse one. Say if the floor is still too strong, or already too silly.
           </div>
           <div style={{ marginTop: 14 }}>
             <button onClick={() => setPlaying(true)}>Play</button> <button onClick={onExit}>Home</button>
@@ -238,7 +238,7 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
           >
             {RUNGS.map((r, i) => (
               <option key={r.name} value={i}>
-                {r.name} (skill {r.skill} · {r.nodes}n)
+                {r.name} — {knobs(r)}
               </option>
             ))}
           </select>

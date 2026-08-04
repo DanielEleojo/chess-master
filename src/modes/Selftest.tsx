@@ -7,7 +7,8 @@ import { buildDeck } from './TrapCards'
 import { bump, type Stat } from '../lib/history'
 import { describeGame, monthKey, newGames, type Game } from '../lib/sync'
 import { bookWalk, flagMoves } from '../lib/analyze'
-import { startEngine } from '../lib/engine'
+import { softmaxPick, startEngine } from '../lib/engine'
+import { RUNGS } from './Spar'
 import { computeFacts } from '../lib/facts'
 import { MODEL, coachUp } from '../lib/coach'
 import type { Analysis } from '../lib/analyze'
@@ -268,6 +269,25 @@ export function Selftest({
     ok('coach deep-link deals his own positions only', dealCards(pool, mineCards, emptyHistory(), true).every((c) => c.own))
     ok('no flagged games yet: deal still fills from lichess', dealCards(pool, [], emptyHistory(), true).length === 10)
     ok('coach: non-opening cluster deals those positions back as cards (013)', pClu.mode === 'puzzles' && pClu.ownOnly === true)
+
+    // sparring (014): the softmax is what makes the low rungs beatable — temp 0
+    // must never stray, and the floor's temp must actually reach the bad moves
+    const cands = [
+      { mv: 'e2e4', cp: 30 },
+      { mv: 'g1f3', cp: -20 },
+      { mv: 'b1a3', cp: -300 },
+      { mv: 'g2g4', cp: -900 },
+    ]
+    ok(
+      'spar: temp 0 always plays the top candidate',
+      Array.from({ length: 30 }, () => softmaxPick(cands, 0)).every((m) => m === 'e2e4'),
+    )
+    const roll = (temp: number) =>
+      Array.from({ length: 400 }, () => softmaxPick(cands, temp)).filter((m) => m === 'g2g4').length
+    const floor = roll(RUNGS[0].temp)
+    ok(`spar: the floor (temp ${RUNGS[0].temp}) hangs the -900cp move sometimes (${floor}/400)`, floor > 20 && floor < 200)
+    const improver = roll(RUNGS[3].temp)
+    ok(`spar: rungs are ordered — Improver hangs it far less (${improver}/400)`, improver < floor / 2)
 
     setOut(res)
     ;(async () => {
