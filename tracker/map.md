@@ -63,10 +63,11 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Build fact-grounded coach Q&A](tickets/033-build-coach-followup-qa.md) — 027 shipped: "what if" toggles the board interactive and mirrors LineDrill's `explainMiss` eval-both-lines pattern per click (fresh from the flagged position each time, not cumulative); "idea" adds a `framing` param to `coachSay` reusing the same facts. Verified live on a real flagged move both ways; reframing is honest about leaning on "why X fails" content when that's most of what facts.ts has for a position.
 
 - [Selftest crashes on direct load — renders before data arrives](tickets/028-selftest-crash-on-load.md) — the `lines`/`traps` race this ticket originally named was already closed by ticket 011's loading gate; live re-diagnosis found the real live crash is a *different* race added later by 018/024 — `ratingHistory()`'s fixtures match against the module-level `USER`, unset until `App`'s async `resolveChessUsername()` resolves. `Selftest.tsx` now pins and restores `USER` around that one block instead of depending on load order; `main.tsx` also gained a small `ErrorBoundary` around `<App/>` so no future crash anywhere can blank the whole app again.
+- [Broken underpromotion puzzle card](tickets/034-broken-underpromotion-puzzle-card.md) — the UCI→SAN conversion was a red herring (already correct); the shared drill engine's promotion fallback (`src/lib/drill.ts`) hardcoded queen instead of reading the expected move's own piece, so `p:Oezqb`'s `f1=N` could never match. Fixed, Selftest's `every tactics card walks its own solution` check is green.
 
 ## Not yet specified
 
-- [034](tickets/034-broken-underpromotion-puzzle-card.md) — tactics card `p:Oezqb`'s solution includes an underpromotion (`f2f1n`) that the puzzle-card walk can't complete; likely lost in the UCI→SAN conversion. Surfaced verifying 028, unrelated to it. Open, unassigned, unblocked.
+(none — frontier is empty, all 34 tickets closed)
 
 ## Out of scope
 

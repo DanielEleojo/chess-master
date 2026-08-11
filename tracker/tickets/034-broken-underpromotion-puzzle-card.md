@@ -30,3 +30,26 @@ underpromotion suffixes survive that conversion. Fix there, or — if
 — filter them at build time instead, whichever is cheaper. Selftest's
 existing `every tactics card walks its own solution` check is the pass/fail
 signal; no new check needed.
+
+## Resolution
+
+The UCI→SAN conversion this ticket scoped toward was a red herring:
+`src/lib/puzzles.ts`'s `uciLine` already passes `promotion: u.slice(4) ||
+undefined` into `chess.move(...)`, and chess.js's `.history({verbose:
+true})` correctly records the underpromotion on the resulting `Move` —
+`p:Oezqb`'s `Line` already carried `f1=N`, not `f1=Q`, going in.
+
+The actual bug was one layer up, in the shared drill engine every mode
+walks: `src/lib/drill.ts`'s `tryMove` tries a bare `{from, to}` first, and
+on a promotion square that throws (chess.js needs the promotion hint), so
+it retries with a hardcoded `promotion: 'q'` — always queen, regardless of
+what the line's own expected move actually promotes to. For `p:Oezqb` that
+forced `f1=Q`, which never matches the expected `f1=N`, so the card could
+never be completed as scripted. Fixed by reading the promotion piece off
+the expected move itself: `promotion: exp.promotion ?? 'q'` (queen only
+stays the default for a from/to that isn't a promotion at all).
+
+One-line fix, `src/lib/drill.ts`'s `tryMove` only — `build-puzzles.py` and
+`puzzles.ts` untouched, since neither was ever broken. Verified via
+Selftest: `every tactics card walks its own solution` now passes for
+`p:Oezqb` along with the rest of the deck.

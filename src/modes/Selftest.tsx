@@ -262,13 +262,16 @@ export function Selftest({
     // put it back rather than depend on that resolution having finished.
     const wasUser = USER
     setUser('babadaniel')
-    const rh = ratingHistory([gr(3, 344), gr(1, 300), gr(2, 320), gr(1, 100, 'bullet'), { ...gr(4, 999), rated: false }])
-    ok('coach: rating history per class, sorted, rated only', rh.rapid?.length === 3 && rh.rapid[2].rating === 344 && rh.bullet?.length === 1)
-    const m = milestone(rh)!
-    ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
-    ok('coach: trend measured against earlier games', m.trend === 44)
-    ok('coach: no games, no milestone', milestone({}) === null)
-    setUser(wasUser)
+    try {
+      const rh = ratingHistory([gr(3, 344), gr(1, 300), gr(2, 320), gr(1, 100, 'bullet'), { ...gr(4, 999), rated: false }])
+      ok('coach: rating history per class, sorted, rated only', rh.rapid?.length === 3 && rh.rapid[2].rating === 344 && rh.bullet?.length === 1)
+      const m = milestone(rh)!
+      ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
+      ok('coach: trend measured against earlier games', m.trend === 44)
+      ok('coach: no games, no milestone', milestone({}) === null)
+    } finally {
+      setUser(wasUser)
+    }
 
     // tactics deck (ticket 013) — fen-rooted cards walked by the shared drill engine
     ok(`tactics deck loaded: ${tactics.length} cards (expect >= 300)`, tactics.length >= 300)
