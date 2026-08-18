@@ -6,7 +6,8 @@ import { makeDrill, userMoveIdxs } from '../lib/drill'
 import { buildDeck } from './TrapCards'
 import { bump, type Stat } from '../lib/history'
 import { USER, describeGame, gameParts, monthKey, newGames, setUser, type Game } from '../lib/sync'
-import { SPAR_TC, bookWalk, flagMoves, sparGame } from '../lib/analyze'
+import { SPAR_TC, bookWalk, flagMoves, gameAcc, judgeMoves, moveAcc, sparGame, winPct } from '../lib/analyze'
+import { bookRun, epd, type Openings } from '../lib/openings'
 import { softmaxPick, startEngine } from '../lib/engine'
 import { RUNGS } from './Spar'
 import { computeFacts } from '../lib/facts'
@@ -144,22 +145,73 @@ export function Selftest({
     ok('book: opponent deviation flagged with their move (020)', oppLeft?.leftAtPly === 1 && oppLeft.by === 'opp' && oppLeft.oppSan === 'd5')
     ok('book: never-in-book is null', bookWalk(['d4', 'd5'], 'w', book) === null)
 
-    // analysis: blunder flagging on hand-made evals
+    // analysis: lichess's open accuracy math (035) — not reverse-engineered CAPS
+    ok('accuracy: win% is 50 at equal and symmetric', winPct(0) === 50 && Math.abs(winPct(120) + winPct(-120) - 100) < 1e-9)
+    ok('accuracy: win% saturates toward mate scores', winPct(9990) > 97 && winPct(-9990) < 3)
+    ok('accuracy: holding or gaining scores 100', moveAcc(50, 50) === 100 && moveAcc(40, 60) === 100)
+    ok('accuracy: a 30-win% drop scores like a blunder', moveAcc(80, 50) < 30)
+    const flat = gameAcc([20, 20, 20, 20, 20], 'w')
+    const rocky = gameAcc([20, 20, 20, -400, -400], 'w') // white throws it on his 2nd move
+    ok(`accuracy: steady game near-perfect (${flat.toFixed(1)}), thrown game far below (${rocky.toFixed(1)})`, flat > 95 && rocky < flat - 30)
+    ok('accuracy: a colour with no moves grades 100', gameAcc([20], 'b') === 100)
+
+    // analysis: move taxonomy (035) — chess.com's badges on lichess thresholds
     const bg = new Chess()
     for (const s of ['e4', 'e5', 'Qh5']) bg.move(s)
     const bm = bg.history({ verbose: true })
-    const flags = flagMoves(bm, [20, 30, 20, -250], [[], [], ['g1f3', 'b8c6'], []], 'w')
+    const noPv = [[], [], ['g1f3', 'b8c6'], []]
+    const jBook = judgeMoves(bm, [20, 30, 20, -400], [null, null, null, null], noPv, 2)
+    ok('taxonomy: theory plies wear the book badge', jBook[0].tag === 'book' && jBook[1].tag === 'book')
+    ok('taxonomy: a ~32-win% drop is a blunder', jBook[2].tag === 'blunder')
+    const jFlag = judgeMoves(bm, [20, 30, 20, -400], [null, null, null, null], noPv, 0)
+    ok('taxonomy: quiet non-best moves grade excellent', jFlag[0].tag === 'excellent' && jFlag[1].tag === 'excellent')
+    const jBest = judgeMoves(bm, [20, 30, 20, -400], [null, 300, null, null], [['e2e4'], ['e7e5'], [], []], 0)
+    ok('taxonomy: the engine move is best; best with a losing second choice is great', jBest[0].tag === 'best' && jBest[1].tag === 'great')
+    const jMiss = judgeMoves(bm, [20, 30, 400, 50], [null, null, null, null], noPv, 0)
+    ok('taxonomy: letting a winning position slip is a miss', jMiss[2].tag === 'miss')
+    // smothered-mate queen sac: Qg8+!! Rxg8 Nf7# — best, gives the queen, and
+    // the second-best move was NOT already winning big
+    const brC = new Chess('5r1k/6pp/7N/8/2Q5/8/8/6K1 w - - 0 1')
+    brC.move('Qg8+')
+    const brM = brC.history({ verbose: true })
+    const jBr = judgeMoves(brM, [9997, 9998], [100], [['c4g8', 'f8g8', 'h6f7']], 0)
+    ok('taxonomy: a mate sacrifice is brilliant', jBr[0].tag === 'brilliant')
+    const jBrEasy = judgeMoves(brM, [9997, 9998], [900], [['c4g8', 'f8g8', 'h6f7']], 0)
+    ok('taxonomy: the same sac while trivially winning anyway is not', jBrEasy[0].tag !== 'brilliant')
+
+    // analysis: the 013 card feed off the taxonomy — mistake-grade and worse only
+    const flags = flagMoves(bm, [20, 30, 20, -400], noPv, 'w', jFlag)
     ok(
-      'blunder: white swing ≥250cp flagged with best move',
+      'flag: blunder-tagged move flagged with best move',
       flags.length === 1 && flags[0].ply === 2 && flags[0].severity === 'blunder' && flags[0].bestSan === 'Nf3',
     )
-    ok('blunder: fen is the position before the move (013 card shape)', flags[0]?.fen === bm[2].before)
-    ok('blunder: pv converts to san (the why line)', flags[0]?.pvSan.join(' ') === 'Nf3 Nc6')
-    const bFlags = flagMoves(bm, [0, 0, 150, 150], [[], ['d7d5'], [], []], 'b')
-    ok('blunder: black swing sign handled, 150cp = mistake', bFlags.length === 1 && bFlags[0].ply === 1 && bFlags[0].severity === 'mistake')
-    ok('blunder: quiet moves stay unflagged', flagMoves(bm, [20, 25, 20, 30], [[], [], [], []], 'w').length === 0)
-    const pFlags = flagMoves(bm, [20, 30, 20, -250], [[], [], ['g1f3'], ['d8h4']], 'w')
-    ok('blunder: punish line stored in san (017 facts input)', pFlags[0]?.punishSan.join(' ') === 'Qh4')
+    ok('flag: fen is the position before the move (013 card shape)', flags[0]?.fen === bm[2].before)
+    ok('flag: pv converts to san (the why line)', flags[0]?.pvSan.join(' ') === 'Nf3 Nc6')
+    const jB = judgeMoves(bm, [0, 0, 250, 250], [null, null, null, null], noPv, 0)
+    const bFlags = flagMoves(bm, [0, 0, 250, 250], noPv, 'b', jB)
+    ok('flag: black sign handled, a 22-win% drop = mistake', bFlags.length === 1 && bFlags[0].ply === 1 && bFlags[0].severity === 'mistake')
+    const jQ = judgeMoves(bm, [20, 25, 20, 30], [null, null, null, null], noPv, 0)
+    ok('flag: quiet moves stay unflagged', flagMoves(bm, [20, 25, 20, 30], noPv, 'w', jQ).length === 0)
+    const jMissFeed = flagMoves(bm, [20, 30, 400, 50], noPv, 'w', jMiss)
+    ok('flag: a miss deals a card as a mistake', jMissFeed.length === 1 && jMissFeed[0].severity === 'mistake')
+    const pFlags = flagMoves(bm, [20, 30, 20, -400], [[], [], ['g1f3'], ['d8h4']], 'w', jFlag)
+    ok('flag: punish line stored in san (017 facts input)', pFlags[0]?.punishSan.join(' ') === 'Qh4')
+
+    // openings book run (035): EPD-keyed real theory, a broken chain stays broken
+    const om: Openings = new Map()
+    const oc = new Chess()
+    oc.move('e4')
+    om.set(epd(oc.fen()), "B00 King's Pawn Game")
+    oc.move('e5')
+    om.set(epd(oc.fen()), "C20 King's Pawn Game")
+    const og = new Chess()
+    for (const s of ['e4', 'e5', 'Nf3']) og.move(s)
+    const fensAfter = og.history({ verbose: true }).map((m) => m.after)
+    const run = bookRun(fensAfter, om)
+    ok('openings: unbroken theory prefix counted, deepest name kept', run.plies === 2 && run.name === "C20 King's Pawn Game")
+    const broken = bookRun([fensAfter[0], og.fen(), fensAfter[1]], om)
+    ok('openings: leaving theory closes the book for good', broken.plies === 1 && broken.name === "B00 King's Pawn Game")
+    ok('openings: move 1 out of theory is no opening', bookRun([og.fen()], om).plies === 0 && bookRun([og.fen()], om).name === null)
 
     // fact layer (ticket 017, ADR 0001) — the deterministic truths under the coach voice
     const fool = new Chess()
@@ -184,7 +236,8 @@ export function Selftest({
 
     // coach recommender (ticket 018) — deterministic ladder + milestone ladder
     const mkA = (over: Partial<Analysis>): Analysis => ({
-      uuid: 'u', at: '', v: 3, ms: 300, color: 'w', desc: '', endTime: 0, evals: [], blunders: [], book: null, ...over,
+      uuid: 'u', at: '', v: 3, ms: 300, color: 'w', desc: '', endTime: 0, evals: [],
+      judged: [], acc: { w: 100, b: 100 }, opening: null, blunders: [], book: null, ...over,
     })
     const leftBook = (line: string): Analysis =>
       mkA({ book: { line, matchedPlies: 4, leftAtPly: 4, by: 'me', expectedSan: 'Bc4', oppSan: null, outlived: false } })
@@ -380,6 +433,14 @@ export function Selftest({
         /* stays false */
       }
       setOut((o) => [...o, (archives ? 'PASS' : 'FAIL') + '  archives/ route serves the current month'])
+      let bookRows = 0
+      try {
+        const t = await (await fetch('/data/openings.tsv')).text()
+        bookRows = t.split('\n').filter((l) => l.includes('\t')).length
+      } catch {
+        /* stays 0 */
+      }
+      setOut((o) => [...o, (bookRows >= 3000 ? 'PASS' : 'FAIL') + `  openings.tsv vendored (${bookRows} positions)`])
       let months = false
       try {
         const l = await (await fetch('/api/data/archives')).json()

@@ -845,16 +845,6 @@ button.tiny:hover {
   background: var(--raise);
   outline: 1px solid var(--gold);
 }
-/* the ? / ?? glyphs already carry severity, the way an annotator writes them —
-   so colour only says "flagged", and weight separates the two */
-.mv.blunder {
-  color: var(--red);
-  font-weight: 700;
-}
-.mv.mistake {
-  color: var(--red);
-  opacity: 0.7;
-}
 .progress {
   height: 6px;
   background: var(--line);
@@ -872,6 +862,148 @@ button.tiny:hover {
 }
 .bl:hover {
   text-decoration: underline;
+}
+
+/* chess.com Game Review skin (035) — scoped to the one-game review screen.
+   The 021 scoresheet identity stays binding everywhere else (map carve-out):
+   inside .ccr the board goes chess.com green, panels go their dark neutrals,
+   and every badge wears chess.com's own color. */
+.ccr {
+  --cc-brilliant: #26c2a3;
+  --cc-great: #749bbf;
+  --cc-best: #81b64c;
+  --cc-excellent: #81b64c;
+  --cc-good: #95b776;
+  --cc-book: #d5a47d;
+  --cc-inaccuracy: #f7c631;
+  --cc-mistake: #ffa459;
+  --cc-miss: #ff7769;
+  --cc-blunder: #fa412d;
+}
+.ccr .panel {
+  background: #262421;
+  border-color: #3d3a37;
+}
+.ccr cg-board {
+  background-color: #ebecd0;
+  background-image: repeating-conic-gradient(#739552 0% 25%, transparent 0% 50%);
+}
+.ccr cg-board square.last-move {
+  background-color: #ffff3373;
+}
+.ccr cg-board square.selected {
+  background-color: #ffff3399;
+}
+.ccr cg-board square.move-dest:hover {
+  background: #ffff3373;
+}
+.ccr .mv:hover,
+.ccr .mv.cur {
+  background: #3d3a37;
+}
+.ccr .mv.cur {
+  outline-color: #f7c631;
+}
+/* badge colors — summary rows, boardfoot label, notable moves in the list */
+.ccr .tg-brilliant { color: var(--cc-brilliant); }
+.ccr .tg-great { color: var(--cc-great); }
+.ccr .tg-best { color: var(--cc-best); }
+.ccr .tg-excellent { color: var(--cc-excellent); }
+.ccr .tg-good { color: var(--cc-good); }
+.ccr .tg-book { color: var(--cc-book); }
+.ccr .tg-inaccuracy { color: var(--cc-inaccuracy); }
+.ccr .tg-mistake { color: var(--cc-mistake); }
+.ccr .tg-miss { color: var(--cc-miss); }
+.ccr .tg-blunder { color: var(--cc-blunder); }
+/* the move list stays calm: only the dramatic badges keep their color there */
+.ccr .mv.tg-best,
+.ccr .mv.tg-excellent,
+.ccr .mv.tg-good,
+.ccr .mv.tg-book {
+  color: inherit;
+}
+.ccr .mv.tg-brilliant,
+.ccr .mv.tg-great,
+.ccr .mv.tg-miss,
+.ccr .mv.tg-mistake,
+.ccr .mv.tg-blunder {
+  font-weight: 700;
+}
+/* eval bar beside the board, white's share filling from his side */
+.withbar {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.evalbar {
+  position: relative;
+  width: 16px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #403d39;
+}
+.evalbar .wfill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #f0f0f0;
+  transition: height 0.4s;
+}
+.evalbar.flip .wfill {
+  bottom: auto;
+  top: 0;
+}
+/* review header: opening, the two accuracies, badge counts */
+.opening {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.accrow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.accbox {
+  background: #1f1d1b;
+  border-radius: var(--r);
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.accbox b {
+  font-size: 15px;
+}
+.accbox.opp {
+  color: var(--dim);
+}
+.evalgraph {
+  width: 100%;
+  height: 64px;
+  display: block;
+  border-radius: var(--r);
+  cursor: crosshair;
+  margin-top: 8px;
+}
+.tagtable {
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+.tagrow {
+  display: grid;
+  grid-template-columns: 3ch 1fr 3ch;
+  gap: 8px;
+  padding: 1px 0;
+}
+.tagrow > span:first-child {
+  text-align: right;
+}
+.tglabel {
+  text-transform: capitalize;
+}
+.tglabel i {
+  font-style: normal;
+  font-weight: 700;
 }
 
 /* Sparring ladder (014) — rungs as a list you climb, beaten ones struck out */

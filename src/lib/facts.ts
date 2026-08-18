@@ -37,7 +37,7 @@ export interface FactsIn {
   swingCp: number // what played loses vs best, from the mover's side
 }
 
-interface Walked {
+export interface Walked {
   sans: string[]
   moves: Move[]
   mate: boolean // line ends in checkmate delivered by the first mover
@@ -46,7 +46,9 @@ interface Walked {
   biggest: string | null // most valuable piece the first mover captures
 }
 
-function walkLine(fen: string, sans: string[]): Walked {
+// exported for 035's Brilliant call — a best line whose material walk goes
+// negative for the mover is a sacrifice
+export function walkLine(fen: string, sans: string[]): Walked {
   const c = new Chess(fen)
   const first = c.turn()
   const moves: Move[] = []

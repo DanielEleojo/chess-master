@@ -15,7 +15,7 @@ A running local web app Daniel starts with one command and actually trains with:
 - Skills per session: /grilling + /domain-modeling for decisions, /prototype for UX questions, /research subagents for AFK facts.
 - Tracker: local markdown. Tickets are files in `tracker/tickets/`, frontmatter holds `type`, `status`, `assignee`, `blocked-by`. Claim = set `assignee`. Frontier = open, unassigned, all `blocked-by` tickets closed.
 - Domain glossary: `CONTEXT.md` (coaching terms are binding); decisions in `docs/adr/`. Local LLM: Ollama at `localhost:11434`, `qwen2.5:7b-instruct` — the coach voice; it phrases, never decides (ADR 0001).
-- Visual direction is the **scoresheet** (021), and it's binding on new UI: colours are taken off a tournament board, `--gold`/brass means *earned* and `--red`/flag means *wrong* (never decoration), numbers are set in `--mono` with tabular figures, and any surface with a board uses the `.play` shell — board left, feedback in the rail beside it. No webfonts: the app runs offline.
+- Visual direction is the **scoresheet** (021), and it's binding on new UI: colours are taken off a tournament board, `--gold`/brass means *earned* and `--red`/flag means *wrong* (never decoration), numbers are set in `--mono` with tabular figures, and any surface with a board uses the `.play` shell — board left, feedback in the rail beside it. No webfonts: the app runs offline. **One carve-out (035): the Analysis game-review screen pixel-clones chess.com's visual language** — green board, their badge colors, their eval graph — scoped under `.ccr` and binding nowhere else.
 
 ## Decisions so far
 
@@ -65,9 +65,11 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Selftest crashes on direct load — renders before data arrives](tickets/028-selftest-crash-on-load.md) — the `lines`/`traps` race this ticket originally named was already closed by ticket 011's loading gate; live re-diagnosis found the real live crash is a *different* race added later by 018/024 — `ratingHistory()`'s fixtures match against the module-level `USER`, unset until `App`'s async `resolveChessUsername()` resolves. `Selftest.tsx` now pins and restores `USER` around that one block instead of depending on load order; `main.tsx` also gained a small `ErrorBoundary` around `<App/>` so no future crash anywhere can blank the whole app again.
 - [Broken underpromotion puzzle card](tickets/034-broken-underpromotion-puzzle-card.md) — the UCI→SAN conversion was a red herring (already correct); the shared drill engine's promotion fallback (`src/lib/drill.ts`) hardcoded queen instead of reading the expected move's own piece, so `p:Oezqb`'s `f1=N` could never match. Fixed, Selftest's `every tactics card walks its own solution` check is green.
 
+- [Clone chess.com Game Review in Analysis mode](tickets/035-clone-chesscom-game-review.md) — the review now grades every move with chess.com's full badge set (Brilliant→Blunder) on lichess's open math — win%/accuracy formulas, a MultiPV-2 walk so Great can see the second-best move, Brilliant's "not already winning" read off that same second-best — names the opening from a vendored EPD-keyed lichess/chess-openings table (3,810 positions, CC0), and renders both players' accuracy, the eval graph/bar, and inline retry (engine best or within 50cp) in the mode-scoped `.ccr` chess.com skin; the 013 tactics feed is unchanged (mistake-grade and worse only), ANALYSIS_V 5 re-analyzes stale caches on open.
+
 ## Not yet specified
 
-(none — frontier is empty, all 34 tickets closed)
+(none — frontier is empty, all 35 tickets closed)
 
 ## Out of scope
 

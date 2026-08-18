@@ -404,46 +404,177 @@
   },
   "1c0b975b-8fda-11f1-8a72-93bfcf01000f": {
    "uuid": "1c0b975b-8fda-11f1-8a72-93bfcf01000f",
-   "at": "2026-08-04T20:17:07.059Z",
-   "v": 4,
+   "at": "2026-08-18T02:36:51.030Z",
+   "v": 5,
    "ms": 300,
    "color": "b",
    "desc": "You lost vs larry6208 · bullet",
    "endTime": 1785830323,
    "evals": [
-    34,
-    30,
-    43,
-    40,
-    36,
-    31,
-    31,
-    33,
-    30,
-    36,
-    62,
-    54,
+    41,
+    26,
     51,
+    41,
+    40,
+    23,
+    40,
+    32,
+    32,
+    27,
+    50,
+    56,
+    58,
+    58,
     53,
-    54,
-    48,
-    290,
-    215,
-    199,
-    213,
-    422,
+    52,
+    300,
+    224,
+    208,
     229,
-    242,
-    234,
-    389,
-    225,
-    220,
-    239,
-    252,
-    240,
-    358,
-    295
+    419,
+    228,
+    255,
+    222,
+    385,
+    210,
+    245,
+    211,
+    211,
+    243,
+    351,
+    298
    ],
+   "judged": [
+    {
+     "tag": "book",
+     "acc": 95.00288400616901
+    },
+    {
+     "tag": "good",
+     "acc": 91.21219894818968
+    },
+    {
+     "tag": "excellent",
+     "acc": 96.97526568348535
+    },
+    {
+     "tag": "excellent",
+     "acc": 100
+    },
+    {
+     "tag": "excellent",
+     "acc": 94.22731308477074
+    },
+    {
+     "tag": "excellent",
+     "acc": 94.22731308477074
+    },
+    {
+     "tag": "best",
+     "acc": 97.75856387328689
+    },
+    {
+     "tag": "best",
+     "acc": 100
+    },
+    {
+     "tag": "best",
+     "acc": 98.95902368455329
+    },
+    {
+     "tag": "good",
+     "acc": 91.9595843409114
+    },
+    {
+     "tag": "best",
+     "acc": 100
+    },
+    {
+     "tag": "best",
+     "acc": 100
+    },
+    {
+     "tag": "excellent",
+     "acc": 100
+    },
+    {
+     "tag": "excellent",
+     "acc": 100
+    },
+    {
+     "tag": "excellent",
+     "acc": 100
+    },
+    {
+     "tag": "mistake",
+     "acc": 40.38503711043762
+    },
+    {
+     "tag": "good",
+     "acc": 78.72153664963602
+    },
+    {
+     "tag": "best",
+     "acc": 100
+    },
+    {
+     "tag": "best",
+     "acc": 100
+    },
+    {
+     "tag": "inaccuracy",
+     "acc": 57.76824895916301
+    },
+    {
+     "tag": "miss",
+     "acc": 57.56632912504263
+    },
+    {
+     "tag": "best",
+     "acc": 92.18205276043383
+    },
+    {
+     "tag": "best",
+     "acc": 90.28135150428982
+    },
+    {
+     "tag": "inaccuracy",
+     "acc": 61.38541271140433
+    },
+    {
+     "tag": "miss",
+     "acc": 58.8187881248417
+    },
+    {
+     "tag": "best",
+     "acc": 89.49281816327266
+    },
+    {
+     "tag": "good",
+     "acc": 89.81064967511405
+    },
+    {
+     "tag": "best",
+     "acc": 100
+    },
+    {
+     "tag": "best",
+     "acc": 100
+    },
+    {
+     "tag": "good",
+     "acc": 72.36019406959507
+    },
+    {
+     "tag": "good",
+     "acc": 86.49150510089426
+    }
+   ],
+   "acc": {
+    "w": 82.62312683762138,
+    "b": 76.03197904033061
+   },
+   "opening": "A40 Queen's Pawn Game",
    "blunders": [
     {
      "ply": 15,
@@ -454,87 +585,18 @@
      "pvSan": [
       "Nb6",
       "Be2",
-      "Nbd5",
-      "Be5",
-      "Be7"
+      "Be7",
+      "h3",
+      "O-O"
      ],
      "punishSan": [
       "dxe5",
       "Nb6",
       "Bxf7+",
       "Kxf7",
-      "Nd4"
+      "Qb3+"
      ],
-     "swingCp": 242,
-     "severity": "mistake"
-    },
-    {
-     "ply": 19,
-     "san": "Ne4",
-     "fen": "r2qkb1r/pp3ppp/2p2n2/4Bb2/2BP4/2N1P3/PP3PPP/R2Q1RK1 b kq - 0 10",
-     "best": "f8d6",
-     "bestSan": "Bd6",
-     "pvSan": [
-      "Bd6",
-      "Qf3",
-      "Bg6",
-      "Qg3",
-      "Bb4"
-     ],
-     "punishSan": [
-      "Qf3",
-      "Nxc3",
-      "Bxf7+",
-      "Kxf7",
-      "Qxf5+"
-     ],
-     "swingCp": 209,
-     "severity": "mistake"
-    },
-    {
-     "ply": 23,
-     "san": "c5",
-     "fen": "r2qkb1r/pp3ppp/2p5/4Bb2/2BP4/2P1PP2/P5PP/R2Q1RK1 b kq - 0 12",
-     "best": "f8d6",
-     "bestSan": "Bd6",
-     "pvSan": [
-      "Bd6",
-      "Qb3",
-      "O-O",
-      "Bxd6",
-      "Qxd6"
-     ],
-     "punishSan": [
-      "Qb3",
-      "Qe7",
-      "Rad1",
-      "Rc8",
-      "e4"
-     ],
-     "swingCp": 155,
-     "severity": "mistake"
-    },
-    {
-     "ply": 29,
-     "san": "Rf8",
-     "fen": "3rk2r/pp3pBp/8/2b2b2/2B5/2P1PP2/P5PP/R4RK1 b k - 0 15",
-     "best": "c5e3",
-     "bestSan": "Bxe3+",
-     "pvSan": [
-      "Bxe3+",
-      "Kh1",
-      "Rg8",
-      "Bf6",
-      "Rd6"
-     ],
-     "punishSan": [
-      "Bb5+",
-      "Ke7",
-      "Bxf8+",
-      "Kxf8",
-      "Rfe1"
-     ],
-     "swingCp": 118,
+     "swingCp": 248,
      "severity": "mistake"
     }
    ],

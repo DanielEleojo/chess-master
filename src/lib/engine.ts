@@ -6,6 +6,7 @@ export interface Score {
   cp: number // side-to-move perspective; mate-in-N mapped to ±(10000 − N)
   best: string | null // uci, e.g. e2e4
   pv: string[] // principal variation in uci — the "why" behind best
+  cp2: number | null // second-best move's score when asked at multipv 2 (035's Great)
 }
 
 // Sparring strength (014). Node caps alone were not enough — even `nodes 1`
@@ -31,7 +32,7 @@ export function softmaxPick(cands: { mv: string; cp: number }[], temp: number): 
 }
 
 export interface Engine {
-  evalFen(fen: string, ms: number): Promise<Score>
+  evalFen(fen: string, ms: number, multipv?: number): Promise<Score>
   // ponytail: Skill Level / MultiPV are sticky on the worker — sparring gets its own.
   playFen(fen: string, o: Weak): Promise<string | null>
   quit(): void
@@ -59,24 +60,25 @@ export function startEngine(): Engine {
     await until((l) => l === 'readyok')
   })()
   return {
-    evalFen(fen, ms) {
+    evalFen(fen, ms, multipv = 1) {
       const job = queue.then(async () => {
         const done = until((l) => l.startsWith('bestmove'))
+        w.postMessage('setoption name MultiPV value ' + multipv) // sticky on the worker — pin it every call
         w.postMessage('position fen ' + fen)
         w.postMessage('go movetime ' + ms)
         const lines = await done
-        let cp = 0
-        let pv: string[] = []
+        // last info line per multipv slot; lines without the token are slot 1
+        const slots = new Map<number, { cp: number; pv: string[] }>()
         for (const l of lines) {
           const m = l.match(/score (cp|mate) (-?\d+)/)
-          if (m) {
-            cp = m[1] === 'cp' ? +m[2] : Math.sign(+m[2] || -1) * (10000 - Math.abs(+m[2]))
-            const pm = l.match(/ pv (.+)/)
-            if (pm) pv = pm[1].split(' ')
-          }
+          if (!m) continue
+          const cp = m[1] === 'cp' ? +m[2] : Math.sign(+m[2] || -1) * (10000 - Math.abs(+m[2]))
+          const pm = l.match(/ pv (.+)/)
+          slots.set(+(l.match(/multipv (\d+)/)?.[1] ?? 1), { cp, pv: pm ? pm[1].split(' ') : [] })
         }
+        const top = slots.get(1) ?? { cp: 0, pv: [] }
         const bm = lines[lines.length - 1].split(' ')[1]
-        return { cp, best: bm && bm !== '(none)' ? bm : null, pv }
+        return { cp: top.cp, best: bm && bm !== '(none)' ? bm : null, pv: top.pv, cp2: slots.get(2)?.cp ?? null }
       })
       queue = job.catch(() => {})
       return job

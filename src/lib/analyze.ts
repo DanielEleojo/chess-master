@@ -5,19 +5,114 @@
 // is the left-book signal the opening trainer's depth extension (003) reads.
 import { Chess, type Move } from 'chess.js'
 import type { Line } from './pgn'
-import { sanLine } from './facts'
+import { sanLine, walkLine } from './facts'
+import { bookRun, type Openings } from './openings'
 import { USER, describeGame, type Game } from './sync'
 import type { Engine } from './engine'
 
 // Rough-take knobs — react to these first.
 export const MOVE_MS = 300 // engine time per position; ~25s for an 80-ply game, reaches depth ~16+
-export const MISTAKE_CP = 100
-export const BLUNDER_CP = 250
-const CAP = 1000 // clamp evals so mate-score swings don't explode
+const CAP = 1000 // clamp evals so mate-score swings don't explode (lichess caps win% input the same way)
 
 export type FullGame = Game & { pgn: string; end_time: number; rules: string }
 
-export const ANALYSIS_V = 4 // bump when the stored shape or knobs change — stale caches re-analyze
+export const ANALYSIS_V = 5 // bump when the stored shape or knobs change — stale caches re-analyze
+
+// --- lichess's open math (035) ---------------------------------------------
+// win% from cp and per-move accuracy from win% drops, straight from
+// lichess.org/page/accuracy — documented beats proprietary, so numbers land a
+// few points off chess.com's CAPS for the same game, by design.
+export const winPct = (cp: number) => 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * clamp(cp))) - 1)
+
+// mover's win% before vs after; +1 is lichess's uncertainty bonus
+export const moveAcc = (before: number, after: number) =>
+  before <= after
+    ? 100
+    : Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * (before - after)) - 3.1669 + 1))
+
+// Game accuracy per lichess: mean of (a) the volatility-weighted average —
+// each move weighted by the win% standard deviation of a sliding window around
+// it, so moves in wild phases count more — and (b) the harmonic mean.
+export function gameAcc(evals: number[], color: 'w' | 'b'): number {
+  const wp = evals.map(winPct)
+  const n = evals.length - 1
+  const win = Math.max(2, Math.min(8, Math.floor(n / 10)))
+  const stdev = (xs: number[]) => {
+    const m = xs.reduce((a, b) => a + b, 0) / xs.length
+    return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / xs.length)
+  }
+  const accs: number[] = []
+  const weights: number[] = []
+  for (let j = color === 'w' ? 0 : 1; j < n; j += 2) {
+    const before = color === 'w' ? wp[j] : 100 - wp[j]
+    const after = color === 'w' ? wp[j + 1] : 100 - wp[j + 1]
+    accs.push(moveAcc(before, after))
+    weights.push(Math.max(0.5, Math.min(12, stdev(wp.slice(Math.max(0, j + 2 - win), j + 2)))))
+  }
+  if (!accs.length) return 100
+  const weighted = accs.reduce((a, x, i) => a + x * weights[i], 0) / weights.reduce((a, b) => a + b, 0)
+  // ponytail: floor 0.1 so one zero-accuracy move can't zero the whole harmonic term
+  const harmonic = accs.length / accs.reduce((a, x) => a + 1 / Math.max(0.1, x), 0)
+  return (weighted + harmonic) / 2
+}
+
+// --- move taxonomy (035): chess.com's full badge set -----------------------
+export type Tag =
+  | 'brilliant' | 'great' | 'best' | 'excellent' | 'good'
+  | 'book' | 'inaccuracy' | 'mistake' | 'miss' | 'blunder'
+export interface Judged {
+  tag: Tag
+  acc: number // this move's accuracy %
+}
+
+// win%-drop thresholds are lichess's published ones; the rest are our knobs
+export const EXCELLENT_WIN = 2
+export const INACCURACY_WIN = 10
+export const MISTAKE_WIN = 20
+export const BLUNDER_WIN = 30
+export const GREAT_GAP = 20 // best beats second-best by this much win% = the only move
+export const SAC_PTS = 2 // material the best line concedes to count as a sacrifice
+export const BRILLIANT_CAP = 85 // sacs from ≥ this win% were already trivially winning
+export const MISS_WIN = 75 // winning ≥ this and letting ≥10 win% slip = Miss, not inaccuracy
+
+export function judgeMoves(
+  moves: Move[],
+  evals: number[], // white-centric, length moves+1
+  cp2s: (number | null)[], // second-best per position, white-centric (MultiPV 2)
+  pvs: string[][],
+  bookPlies: number,
+): Judged[] {
+  return moves.map((m, j) => {
+    const my = (cp: number) => (m.color === 'w' ? winPct(cp) : 100 - winPct(cp))
+    const before = my(evals[j])
+    const after = my(evals[j + 1])
+    const acc = moveAcc(before, after)
+    const drop = Math.max(0, before - after)
+    const tag = (): Tag => {
+      if (j < bookPlies) return 'book'
+      if (m.from + m.to + (m.promotion ?? '') === pvs[j]?.[0]) {
+        const second = cp2s[j]
+        // brilliant: the engine best *and* it gives up material along its own
+        // line (facts.ts material walk) *and* he wasn't already coasting.
+        // "Coasting" reads the SECOND-best move — the eval before a forced
+        // mate sac is already ~100%, so the best line can't measure it.
+        if (
+          my(second ?? evals[j]) < BRILLIANT_CAP &&
+          walkLine(m.before, sanLine(m.before, pvs[j], 8)).gain <= -SAC_PTS
+        )
+          return 'brilliant'
+        if (second !== null && before - my(second) >= GREAT_GAP) return 'great'
+        return 'best'
+      }
+      if (drop >= BLUNDER_WIN) return 'blunder'
+      if (drop >= INACCURACY_WIN && before >= MISS_WIN) return 'miss'
+      if (drop >= MISTAKE_WIN) return 'mistake'
+      if (drop >= INACCURACY_WIN) return 'inaccuracy'
+      return drop >= EXCELLENT_WIN ? 'good' : 'excellent'
+    }
+    return { tag: tag(), acc }
+  })
+}
 
 export interface Blunder {
   ply: number // 0-based ply index of the flagged move
@@ -50,24 +145,37 @@ export interface Analysis {
   desc: string
   endTime: number
   evals: number[] // white-centric cp; evals[0] = start position
+  judged: Judged[] // per-ply tag + accuracy, both players
+  acc: { w: number; b: number } // game accuracy per player, review header
+  opening: string | null // deepest theory position matched (openings.tsv)
   blunders: Blunder[]
   book: BookInfo | null
 }
 
 const clamp = (cp: number) => Math.max(-CAP, Math.min(CAP, cp))
 
+// The 013 tactics-card feed, unchanged by the taxonomy: only mistake-grade and
+// worse become cards/prose — a Miss is a mistake that happened while winning.
+const FLAG: Partial<Record<Tag, Blunder['severity']>> = {
+  blunder: 'blunder',
+  mistake: 'mistake',
+  miss: 'mistake',
+}
+
 export function flagMoves(
   moves: Move[],
   evals: number[],
   pvs: string[][],
   color: 'w' | 'b',
+  judged: Judged[],
 ): Blunder[] {
   const out: Blunder[] = []
   moves.forEach((m, j) => {
     if (m.color !== color) return
+    const severity = FLAG[judged[j]?.tag as Tag]
+    if (!severity) return
     const swing =
       color === 'w' ? clamp(evals[j]) - clamp(evals[j + 1]) : clamp(evals[j + 1]) - clamp(evals[j])
-    if (swing < MISTAKE_CP) return
     const pv = pvs[j] ?? []
     const pvSan = sanLine(m.before, pv, 5)
     out.push({
@@ -78,8 +186,8 @@ export function flagMoves(
       bestSan: pvSan[0] ?? '?',
       pvSan,
       punishSan: sanLine(m.after, pvs[j + 1] ?? [], 5),
-      swingCp: swing,
-      severity: swing >= BLUNDER_CP ? 'blunder' : 'mistake',
+      swingCp: Math.max(0, swing),
+      severity,
     })
   })
   return out
@@ -114,6 +222,7 @@ export function bookWalk(sans: string[], color: 'w' | 'b', lines: Line[]): BookI
 export async function analyzeGame(
   game: FullGame,
   repertoire: Line[],
+  openings: Openings,
   engine: Engine,
   onProgress: (done: number, total: number) => void,
 ): Promise<Analysis> {
@@ -123,6 +232,7 @@ export async function analyzeGame(
   const color: 'w' | 'b' = game.white.username.toLowerCase() === USER ? 'w' : 'b'
   const fens = [new Chess().fen(), ...moves.map((m) => m.after)]
   const evals: number[] = []
+  const cp2s: (number | null)[] = []
   const pvs: string[][] = []
   for (let i = 0; i < fens.length; i++) {
     const stm: 'w' | 'b' = i === 0 ? 'w' : moves[i - 1].color === 'w' ? 'b' : 'w'
@@ -130,14 +240,19 @@ export async function analyzeGame(
     if (pos.isGameOver()) {
       // ponytail: terminal positions skip the engine — mate is ±10000, any draw 0
       evals.push(pos.isCheckmate() ? (stm === 'w' ? -10000 : 10000) : 0)
+      cp2s.push(null)
       pvs.push([])
     } else {
-      const s = await engine.evalFen(fens[i], MOVE_MS)
+      // MultiPV 2 (035): the second-best score is what makes Great calls possible
+      const s = await engine.evalFen(fens[i], MOVE_MS, 2)
       evals.push(stm === 'w' ? s.cp : -s.cp)
+      cp2s.push(s.cp2 === null ? null : stm === 'w' ? s.cp2 : -s.cp2)
       pvs.push(s.pv.length ? s.pv : s.best ? [s.best] : [])
     }
     onProgress(i + 1, fens.length)
   }
+  const { plies: bookPlies, name: opening } = bookRun(moves.map((m) => m.after), openings)
+  const judged = judgeMoves(moves, evals, cp2s, pvs, bookPlies)
   return {
     uuid: game.uuid,
     at: new Date().toISOString(),
@@ -147,7 +262,10 @@ export async function analyzeGame(
     desc: describeGame(game),
     endTime: game.end_time,
     evals,
-    blunders: flagMoves(moves, evals, pvs, color),
+    judged,
+    acc: { w: gameAcc(evals, 'w'), b: gameAcc(evals, 'b') },
+    opening,
+    blunders: flagMoves(moves, evals, pvs, color, judged),
     // ponytail: sparring replays a book line by construction (014), so counting it
     // would invent left-book and extension evidence he never produced.
     book:
