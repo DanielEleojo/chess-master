@@ -8917,6 +8917,62 @@
     "uuid": "5a3bec8c-a638-11ed-8b07-1f25fa05a300"
    },
    "eco": "https://www.chess.com/openings/Van-Geet-Opening"
+  },
+  {
+   "url": "https://www.chess.com/game/live/173151087488",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2026.08.18\"]\n[Round \"-\"]\n[White \"BabaDaniel\"]\n[Black \"Bbbubbbles\"]\n[Result \"1-0\"]\n[CurrentPosition \"rnbq1b1r/ppp2P1p/2kp4/1Q6/4p3/8/PPPP1PPP/RNB1KB1R b KQ - 4 10\"]\n[Timezone \"UTC\"]\n[ECO \"C40\"]\n[ECOUrl \"https://www.chess.com/openings/Kings-Pawn-Opening-Latvian-Gambit-Accepted\"]\n[UTCDate \"2026.08.18\"]\n[UTCTime \"03:41:16\"]\n[WhiteElo \"380\"]\n[BlackElo \"343\"]\n[TimeControl \"600\"]\n[Termination \"BabaDaniel won by checkmate\"]\n[StartTime \"03:41:16\"]\n[EndDate \"2026.08.18\"]\n[EndTime \"03:45:43\"]\n[Link \"https://www.chess.com/game/live/173151087488\"]\n\n1. e4 {[%clk 0:09:55]} 1... e5 {[%clk 0:09:57.5]} 2. Nf3 {[%clk 0:09:53.3]} 2... f5 {[%clk 0:09:53.5]} 3. exf5 {[%clk 0:09:27.8]} 3... e4 {[%clk 0:09:46.5]} 4. Ne5 {[%clk 0:09:05.1]} 4... Nh6 {[%clk 0:09:33.3]} 5. Qh5+ {[%clk 0:08:08.1]} 5... g6 {[%clk 0:09:26.8]} 6. fxg6 {[%clk 0:07:58.4]} 6... d6 {[%clk 0:09:18.7]} 7. Nf7 {[%clk 0:07:25.4]} 7... Nxf7 {[%clk 0:09:11.1]} 8. gxf7+ {[%clk 0:07:04.3]} 8... Kd7 {[%clk 0:09:07]} 9. Qf5+ {[%clk 0:06:49.9]} 9... Kc6 {[%clk 0:09:02.6]} 10. Qb5# {[%clk 0:06:33]} 1-0\n",
+   "time_control": "600",
+   "end_time": 1787024743,
+   "rated": true,
+   "tcn": "mC0Kgv1LCLKCvK!VdN2ULUZRK1V1U18ZNLZQLH",
+   "uuid": "aaa8562a-9ab6-11f1-b5d5-5f0b4701000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "rnbq1b1r/ppp2P1p/2kp4/1Q6/4p3/8/PPPP1PPP/RNB1KB1R b KQ - 4 10",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 380,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/babadaniel",
+    "username": "BabaDaniel",
+    "uuid": "5a3bec8c-a638-11ed-8b07-1f25fa05a300"
+   },
+   "black": {
+    "rating": 343,
+    "result": "checkmated",
+    "@id": "https://api.chess.com/pub/player/bbbubbbles",
+    "username": "Bbbubbbles",
+    "uuid": "562458bc-3d64-11f0-af98-e9e05e4f891a"
+   },
+   "eco": "https://www.chess.com/openings/Kings-Pawn-Opening-Latvian-Gambit-Accepted"
+  },
+  {
+   "url": "https://www.chess.com/game/live/173151204752",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2026.08.18\"]\n[Round \"-\"]\n[White \"mr_maahi\"]\n[Black \"BabaDaniel\"]\n[Result \"1-0\"]\n[CurrentPosition \"3rkb1r/pp3ppp/4p3/6P1/4N3/3n4/PP1KN2P/R2Q1R2 b k - 0 24\"]\n[Timezone \"UTC\"]\n[ECO \"B10\"]\n[ECOUrl \"https://www.chess.com/openings/Caro-Kann-Defense\"]\n[UTCDate \"2026.08.18\"]\n[UTCTime \"03:46:15\"]\n[WhiteElo \"381\"]\n[BlackElo \"372\"]\n[TimeControl \"600\"]\n[Termination \"mr_maahi won on time\"]\n[StartTime \"03:46:15\"]\n[EndDate \"2026.08.18\"]\n[EndTime \"03:59:47\"]\n[Link \"https://www.chess.com/game/live/173151204752\"]\n\n1. e4 {[%clk 0:09:57.6]} 1... c6 {[%clk 0:09:26]} 2. Bc4 {[%clk 0:09:55.2]} 2... d5 {[%clk 0:09:12.7]} 3. Bd3 {[%clk 0:09:37.8]} 3... Nf6 {[%clk 0:08:51.7]} 4. Nf3 {[%clk 0:09:30.3]} 4... Nxe4 {[%clk 0:06:39.8]} 5. Bxe4 {[%clk 0:09:24.4]} 5... dxe4 {[%clk 0:06:38.4]} 6. Ng5 {[%clk 0:09:21.1]} 6... Bf5 {[%clk 0:06:26.6]} 7. f3 {[%clk 0:09:12.4]} 7... e6 {[%clk 0:06:26.5]} 8. g4 {[%clk 0:09:07]} 8... Bg6 {[%clk 0:05:59.3]} 9. fxe4 {[%clk 0:08:59]} 9... Bxe4 {[%clk 0:05:57.3]} 10. Nxe4 {[%clk 0:08:57.6]} 10... Qd5 {[%clk 0:05:47.5]} 11. Nbc3 {[%clk 0:08:50.6]} 11... Qd4 {[%clk 0:05:03.1]} 12. g5 {[%clk 0:08:27.7]} 12... c5 {[%clk 0:03:36.7]} 13. d3 {[%clk 0:08:20.8]} 13... Nd7 {[%clk 0:01:59.5]} 14. Be3 {[%clk 0:08:17.2]} 14... Qxe3+ {[%clk 0:01:53]} 15. Ne2 {[%clk 0:08:10.3]} 15... Rd8 {[%clk 0:01:18.2]} 16. Ng3 {[%clk 0:07:36.2]} 16... c4 {[%clk 0:00:43.4]} 17. Nf1 {[%clk 0:07:31.5]} 17... Qf3 {[%clk 0:00:36.3]} 18. Nfg3 {[%clk 0:06:55]} 18... cxd3 {[%clk 0:00:24.3]} 19. cxd3 {[%clk 0:06:52.7]} 19... Nc5 {[%clk 0:00:21.5]} 20. Rf1 {[%clk 0:06:48.2]} 20... Nxd3+ {[%clk 0:00:11]} 21. Kd2 {[%clk 0:06:46.4]} 21... Nb4+ {[%clk 0:00:05.1]} 22. Ke1 {[%clk 0:06:44.5]} 22... Nd3+ {[%clk 0:00:03.3]} 23. Kd2 {[%clk 0:06:43.3]} 23... Qe4 {[%clk 0:00:01.4]} 24. Nxe4 {[%clk 0:06:41.7]} 1-0\n",
+   "time_control": "600",
+   "end_time": 1787025587,
+   "rated": true,
+   "tcn": "mCYQfAZJAt!TgvTCtCJCvM6Lnv0SoELUvCUCMC7JbsJBEMQIlt5ZcuBusm47CwIAwfuvfwAtktZIhfIteltzleztelvCwC",
+   "uuid": "5ca4e8a6-9ab7-11f1-997b-11af3501000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "3rkb1r/pp3ppp/4p3/6P1/4N3/3n4/PP1KN2P/R2Q1R2 b k - 0 24",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 381,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/mr_maahi",
+    "username": "mr_maahi",
+    "uuid": "a6c2bc26-0707-11ef-bd8f-db773f2c8f22"
+   },
+   "black": {
+    "rating": 372,
+    "result": "timeout",
+    "@id": "https://api.chess.com/pub/player/babadaniel",
+    "username": "BabaDaniel",
+    "uuid": "5a3bec8c-a638-11ed-8b07-1f25fa05a300"
+   },
+   "eco": "https://www.chess.com/openings/Caro-Kann-Defense"
   }
  ]
 }
