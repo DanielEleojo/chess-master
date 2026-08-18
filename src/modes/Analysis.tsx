@@ -382,7 +382,9 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p, sel])
 
-  // "watch it" heartbeat: step the seeded line until it runs out
+  // "watch it" heartbeat: step the seeded line until it runs out. Keyed on
+  // the line's length, not the va object — background eval fills replace the
+  // object and must not reset the step timer.
   useEffect(() => {
     if (!auto || !va) return
     if (vi >= va.sans.length) {
@@ -391,7 +393,8 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     }
     const t = setTimeout(() => setVi((v) => v + 1), 800)
     return () => clearTimeout(t)
-  }, [auto, vi, va])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto, vi, va?.sans.length])
 
   // board follows the viewed ply — or the open variation. In the game view the
   // flagged next-move draws played-vs-best arrows and the just-played move
@@ -514,6 +517,28 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     })
     setVi(0)
     setAuto(true)
+    // fill per-ply evals behind the playback so the bar tracks each move
+    void (async () => {
+      const gen = genRef.current
+      const eng = (engRef.current ??= startEngine())
+      for (let i = 1; i < fens.length; i++) {
+        const pos = new Chess(fens[i])
+        const cpW = pos.isGameOver()
+          ? pos.isCheckmate()
+            ? pos.turn() === 'w'
+              ? -10000
+              : 10000
+            : 0
+          : await eng.evalFen(fens[i], WHY_MS).then((s) => (pos.turn() === 'w' ? s.cp : -s.cp))
+        if (gen !== genRef.current) return // variation closed while evaluating
+        // a mid-line branch truncates the tail — only fill still-matching fens
+        setVa((v) =>
+          v && v.fens[i] === fens[i]
+            ? { ...v, evals: v.evals.map((e, k) => (k === i ? cpW : e)) }
+            : v,
+        )
+      }
+    })()
   }
 
   // 036 free exploration, chess.com-style: any move branches a variation from
@@ -655,7 +680,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
   const flagOf = (j: number) => analysis?.blunders.find((b) => b.ply === j)
   const blCur = flagOf(p)
   // eval bar/number track the variation when one is open; seeded "watch it"
-  // plies aren't engine-checked, so the bar holds at the branch-point eval
+  // plies fill in behind the playback, holding the last value until they do
   const shownEval = (va ? va.evals[vi] : null) ?? analysis?.evals[p] ?? 0
   // variation SANs numbered from the branch ply, "12." / "12…" style
   const vNum = (i: number) => {

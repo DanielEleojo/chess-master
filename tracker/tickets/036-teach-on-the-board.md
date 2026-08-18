@@ -52,8 +52,11 @@ Shipped in `src/modes/Analysis.tsx` (+ a small `.varbar`/`.varnote` CSS block):
 - 027's text-only "what if I played X?" retired — the explorer answers the
   same question on the board with the same engine budget. Retry unchanged
   and still exclusive (retryOn routes moves to the verdict instead).
-- ponytail: seeded "watch it" plies aren't engine-checked, so the eval bar
-  holds at the branch-point value during playback; per-ply evals if wanted.
+- Seeded "watch it" plies get per-ply evals filled in behind the playback
+  (WHY_MS each, terminal positions short-circuit to mate/draw values); each
+  fill validates its fen so a mid-line branch can't be overwritten by a late
+  result, and the step timer keys on the line's length so fills replacing
+  the va object don't reset it.
 
 Verified live: punishment line auto-played 8…e5 9.dxe5 Nb6 10.Bxf7+ Kxf7
 11.Qb3+ on the board; mid-line branch (Bb4 at ply 2) truncated the tail and
