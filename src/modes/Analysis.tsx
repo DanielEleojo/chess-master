@@ -31,8 +31,17 @@ const START_FEN = new Chess().fen()
 const WHY_MS = 500
 const RETRY_CP = 50 // retry succeeds on the engine move or anything within this
 const GENERIC_FALLBACK = 'Nothing hangs — the cost is positional'
-type WhatIf = null | 'busy' | { text: string; tag: string }
 type Retry = null | 'busy' | { ok: boolean; text: string }
+// 036: a variation branched off the viewed position — seeded by a "watch it"
+// button or grown one explored move at a time. fens/evals carry one more
+// entry than sans/ucis (index 0 = the game position the line branches from).
+type Var = {
+  sans: string[]
+  ucis: string[]
+  fens: string[]
+  evals: (number | null)[] // white-centric; null = shown but not engine-checked
+  note: string | null // the teacher's one-liner under the board
+}
 
 // chess.com's badge language (035): their colors, their glyphs. TS-side map
 // because SVG badges and graph dots can't read CSS vars.
@@ -156,24 +165,20 @@ function Summary({ a, sel }: { a: GameAnalysis; sel: FullGame }) {
 
 // The 017 explanation: facts render instantly, the coach voice swaps in when
 // Ollama answers (or never does — facts stand alone by design, ADR 0001).
-// 027 adds a fixed two-button follow-up: "what if X" (board goes interactive,
-// handled by the parent) and "what's the idea" (re-frames these same facts).
-// 035 adds retry: same interactive board, but with a pass/fail verdict.
+// 036 moves the teaching onto the board: "watch" buttons play the engine's
+// lines out move by move, and free exploration replaced 027's text what-if.
+// 035's retry keeps its pass/fail verdict.
 function CoachNote({
   a,
   bl,
-  whatIfOn,
-  onToggleWhatIf,
-  whatIf,
+  onPlayLine,
   retryOn,
   onToggleRetry,
   retry,
 }: {
   a: GameAnalysis
   bl: Blunder
-  whatIfOn: boolean
-  onToggleWhatIf: () => void
-  whatIf: WhatIf
+  onPlayLine: (sans: string[]) => void
   retryOn: boolean
   onToggleRetry: () => void
   retry: Retry
@@ -230,12 +235,17 @@ function CoachNote({
             ? 'coach voice'
             : 'coach voice offline — facts only'}
       </div>
-      <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+      <div style={{ display: 'flex', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
+        <button className="tiny" onClick={() => onPlayLine(bl.pvSan)}>
+          ▶ watch the right plan
+        </button>
+        {bl.punishSan.length > 0 && (
+          <button className="tiny" onClick={() => onPlayLine([bl.san, ...bl.punishSan])}>
+            ▶ watch the punishment
+          </button>
+        )}
         <button className="tiny" onClick={onToggleRetry}>
           {retryOn ? 'close retry' : 'retry this move'}
-        </button>
-        <button className="tiny" onClick={onToggleWhatIf}>
-          {whatIfOn ? 'close what if' : 'what if I played X?'}
         </button>
         {!genericOnly && (
           <button className="tiny" onClick={showIdea}>
@@ -249,16 +259,6 @@ function CoachNote({
       {retry === 'busy' && <div className="tiny dim">engine checking your move…</div>}
       {retry !== null && typeof retry === 'object' && (
         <div className={'whynot ' + (retry.ok ? 'good' : 'bad')}>{retry.text}</div>
-      )}
-      {whatIfOn && whatIf === null && (
-        <div className="tiny dim">click a piece, then a square, on the board</div>
-      )}
-      {whatIf === 'busy' && <div className="tiny dim">engine checking your move…</div>}
-      {whatIf !== null && typeof whatIf === 'object' && (
-        <div className="whynot">
-          {whatIf.text}
-          <div className="tiny dim">{whatIf.tag}</div>
-        </div>
       )}
       {idea === 'busy' && <div className="tiny dim">coach voice thinking…</div>}
       {idea !== null && typeof idea === 'string' && <div className="whynot">{idea}</div>}
@@ -280,11 +280,13 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
   const [analysis, setAnalysis] = useState<GameAnalysis | null>(null)
   const [err, setErr] = useState('')
   const [p, setP] = useState(0) // plies played in the viewed position
-  const [whatIfOn, setWhatIfOn] = useState(false)
-  const [whatIf, setWhatIf] = useState<WhatIf>(null)
   const [retryOn, setRetryOn] = useState(false)
   const [retry, setRetry] = useState<Retry>(null)
+  const [va, setVa] = useState<Var | null>(null) // 036: the open variation
+  const [vi, setVi] = useState(0) // position index within it (0 = branch point)
+  const [auto, setAuto] = useState(false) // "watch it" auto-stepping
 
+  const genRef = useRef(0) // bumps when the variation closes — stale engine replies bail
   const storeRef = useRef<AnalysisStore>({ games: {} })
   const openingsRef = useRef<Openings>(new Map())
   const engRef = useRef<Engine | null>(null)
@@ -364,39 +366,61 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     return c.history({ verbose: true })
   }, [sel, analysis])
 
-  // leaving the flagged move (or the game) closes any open exploration
+  // closing the variation invalidates any engine reply still in flight
+  function exitVar() {
+    genRef.current++
+    setVa(null)
+    setVi(0)
+    setAuto(false)
+  }
+
+  // leaving the viewed move (or the game) closes any open exploration
   useEffect(() => {
-    setWhatIfOn(false)
-    setWhatIf(null)
+    exitVar()
     setRetryOn(false)
     setRetry(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p, sel])
 
-  // board follows the viewed ply; flagged next-move draws played-vs-best arrows
-  // and the just-played move wears its chess.com badge on the landing square.
-  // 027/035: while what-if or retry is on, the board takes clicks instead.
+  // "watch it" heartbeat: step the seeded line until it runs out
+  useEffect(() => {
+    if (!auto || !va) return
+    if (vi >= va.sans.length) {
+      setAuto(false)
+      return
+    }
+    const t = setTimeout(() => setVi((v) => v + 1), 800)
+    return () => clearTimeout(t)
+  }, [auto, vi, va])
+
+  // board follows the viewed ply — or the open variation. In the game view the
+  // flagged next-move draws played-vs-best arrows and the just-played move
+  // wears its chess.com badge; a variation shows bare moves. The board is
+  // always movable (036): any move explores, unless retry is judging instead.
   useEffect(() => {
     if (!cg.current || !analysis || !moves.length) return
-    const fen = p === 0 ? START_FEN : moves[p - 1].after
+    const fen = va ? va.fens[vi] : p === 0 ? START_FEN : moves[p - 1].after
     const pos = new Chess(fen)
-    const bl = analysis.blunders.find((b) => b.ply === p)
-    const interactive = (whatIfOn || retryOn) && bl
+    const bl = va ? undefined : analysis.blunders.find((b) => b.ply === p)
+    const lastUci = va && vi > 0 ? va.ucis[vi - 1] : null
     cg.current.set({
       fen,
       orientation: analysis.color === 'w' ? 'white' : 'black',
       turnColor: pos.turn() === 'w' ? 'white' : 'black',
       check: pos.inCheck(),
-      lastMove: p > 0 ? ([moves[p - 1].from, moves[p - 1].to] as Key[]) : undefined,
-      movable: interactive
-        ? {
-            free: false,
-            color: pos.turn() === 'w' ? 'white' : 'black',
-            dests: destsOf(pos),
-            showDests: true,
-          }
-        : { free: false, dests: new Map() },
+      lastMove: lastUci
+        ? ([lastUci.slice(0, 2), lastUci.slice(2, 4)] as Key[])
+        : !va && p > 0
+          ? ([moves[p - 1].from, moves[p - 1].to] as Key[])
+          : undefined,
+      movable: {
+        free: false,
+        color: pos.turn() === 'w' ? 'white' : 'black',
+        dests: destsOf(pos),
+        showDests: true,
+      },
     })
-    const played = p > 0 ? analysis.judged[p - 1] : undefined
+    const played = !va && p > 0 ? analysis.judged[p - 1] : undefined
     cg.current.setAutoShapes([
       ...(played && GLYPH[played.tag]
         ? [{ orig: moves[p - 1].to as Key, customSvg: { html: badgeSvg(played.tag) } }]
@@ -416,24 +440,40 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
           ]
         : []),
     ])
-  }, [p, analysis, moves, whatIfOn, retryOn])
+  }, [p, analysis, moves, retryOn, va, vi])
 
+  // ← → walk the game — or the open variation; ← past its start exits it
   useEffect(() => {
     if (!analysis) return
     const h = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      if (va) {
+        setAuto(false)
+        if (e.key === 'ArrowLeft') {
+          if (vi === 0) exitVar()
+          else setVi(vi - 1)
+        } else setVi(Math.min(va.sans.length, vi + 1))
+        return
+      }
       if (e.key === 'ArrowLeft') setP((x) => Math.max(0, x - 1))
-      if (e.key === 'ArrowRight') setP((x) => Math.min(moves.length, x + 1))
+      else setP((x) => Math.min(moves.length, x + 1))
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [analysis, moves.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysis, moves.length, va, vi])
 
-  // shared by what-if and retry: play the clicked move from the flagged
-  // position, auto-queening on promotion
-  function tryMoveFrom(fen: string, from: string, to: string): { c: Chess; mv: Move } | null {
+  // shared by exploration and retry: play the clicked (or engine-uci) move,
+  // auto-queening when no promotion piece was given
+  function tryMoveFrom(
+    fen: string,
+    from: string,
+    to: string,
+    promotion?: string,
+  ): { c: Chess; mv: Move } | null {
     const c = new Chess(fen)
     try {
-      return { c, mv: c.move({ from, to }) }
+      return { c, mv: c.move({ from, to, promotion }) }
     } catch {
       try {
         return { c, mv: c.move({ from, to, promotion: 'q' }) }
@@ -443,33 +483,91 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     }
   }
 
-  // 027 "what if I played X?": same shape as LineDrill's explainMiss — eval the
-  // clicked move and the engine's best move at equal depth, then let facts.ts
-  // walk both lines the same way it does for the real played move.
-  async function tryWhatIf(from: string, to: string) {
+  // 036 "watch it": seed the variation with a known line and auto-play it —
+  // the teacher moving pieces instead of naming squares
+  function playLine(sans: string[]) {
     if (!analysis) return
-    const bl = analysis.blunders.find((b) => b.ply === p)
-    if (!bl) return
-    const t = tryMoveFrom(bl.fen, from, to)
-    if (!t) return
-    const { c: cA, mv } = t
-    const cB = new Chess(bl.fen)
-    cB.move(bl.bestSan)
-    setWhatIf('busy')
-    const eng = (engRef.current ??= startEngine())
-    const [a, b] = await Promise.all([eng.evalFen(cA.fen(), WHY_MS), eng.evalFen(cB.fen(), WHY_MS)])
-    const facts = computeFacts({
-      fen: bl.fen,
-      played: mv.san,
-      best: bl.bestSan,
-      bestLine: [bl.bestSan, ...sanLine(cB.fen(), b.pv, 4)],
-      punishLine: sanLine(cA.fen(), a.pv, 5),
-      swingCp: Math.max(0, a.cp - b.cp),
+    exitVar()
+    setRetryOn(false)
+    setRetry(null)
+    const c = new Chess(p === 0 ? START_FEN : moves[p - 1].after)
+    const fens = [c.fen()]
+    const ucis: string[] = []
+    const ok: string[] = []
+    try {
+      for (const s of sans) {
+        const mv = c.move(s)
+        ucis.push(mv.from + mv.to)
+        fens.push(c.fen())
+        ok.push(mv.san)
+      }
+    } catch {
+      /* play what parsed */
+    }
+    if (!ok.length) return
+    setVa({
+      sans: ok,
+      ucis,
+      fens,
+      evals: fens.map((_, i) => (i === 0 ? (analysis.evals[p] ?? 0) : null)),
+      note: null,
     })
-    setWhatIf({ text: facts.join(' '), tag: 'coach voice thinking…' })
-    const ctx = `He's exploring "what if I played ${mv.san}?" instead of ${bl.san} on move ${Math.floor(bl.ply / 2) + 1} of his game.`
-    const prose = await coachSay(`whatif:${bl.ply}:${mv.san}`, ctx, facts)
-    setWhatIf(prose ? { text: prose, tag: 'coach voice' } : { text: facts.join(' '), tag: 'coach voice offline — facts only' })
+    setVi(0)
+    setAuto(true)
+  }
+
+  // 036 free exploration, chess.com-style: any move branches a variation from
+  // the shown position — the engine evals it, answers on the board, and the
+  // note says what the move cost and where the line likely goes.
+  async function exploreMove(from: string, to: string) {
+    if (!analysis) return
+    const baseFen = va ? va.fens[vi] : p === 0 ? START_FEN : moves[p - 1].after
+    const t = tryMoveFrom(baseFen, from, to)
+    if (!t) return
+    const { c, mv } = t
+    const prev = (va ? va.evals[vi] : null) ?? analysis.evals[p] ?? 0
+    const head = va ?? { sans: [], ucis: [], fens: [baseFen], evals: [prev], note: null }
+    // moving from mid-line abandons the tail and branches here
+    const cut = {
+      sans: [...head.sans.slice(0, vi), mv.san],
+      ucis: [...head.ucis.slice(0, vi), mv.from + mv.to],
+      fens: [...head.fens.slice(0, vi + 1), c.fen()],
+      evals: [...head.evals.slice(0, vi + 1), null as number | null],
+    }
+    setAuto(false)
+    setVa({ ...cut, note: 'engine thinking…' })
+    setVi(cut.sans.length)
+    const gen = genRef.current
+    const eng = (engRef.current ??= startEngine())
+    const s = await eng.evalFen(c.fen(), WHY_MS)
+    if (gen !== genRef.current) return // variation closed while thinking
+    const cpW = c.turn() === 'w' ? s.cp : -s.cp
+    const my = (cp: number) => (mv.color === 'w' ? cp : -cp)
+    const d = my(prev) - my(cpW) // what the move cost its mover
+    const verdict =
+      d >= 250
+        ? `loses ${(d / 100).toFixed(1)} — a blunder`
+        : d >= 90
+          ? `loses ${(d / 100).toFixed(1)}`
+          : d >= 40
+            ? 'gives a little back'
+            : 'holds'
+    const reply = s.pv[0]
+    const t2 = reply ? tryMoveFrom(c.fen(), reply.slice(0, 2), reply.slice(2, 4), reply[4]) : null
+    if (t2) {
+      const cont = sanLine(t2.c.fen(), s.pv.slice(1), 4)
+      setVa({
+        sans: [...cut.sans, t2.mv.san],
+        ucis: [...cut.ucis, t2.mv.from + t2.mv.to],
+        fens: [...cut.fens, t2.c.fen()],
+        // the reply is the engine's own line, so its eval carries over
+        evals: [...cut.evals.slice(0, -1), cpW, cpW],
+        note: `${mv.san} ${verdict} (${fmtEval(cpW)}). Engine answers ${t2.mv.san}${cont.length ? ` — likely ${cont.join(' ')}` : ''}. Your move.`,
+      })
+      setVi(cut.sans.length + 1)
+    } else {
+      setVa({ ...cut, evals: [...cut.evals.slice(0, -1), cpW], note: `${mv.san} ${verdict} (${fmtEval(cpW)}).` })
+    }
   }
 
   // 035 inline retry: success = the engine move, or anything within RETRY_CP
@@ -556,6 +654,14 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
   // ---- one game: the review, in chess.com's skin (.ccr — mode-scoped) ----
   const flagOf = (j: number) => analysis?.blunders.find((b) => b.ply === j)
   const blCur = flagOf(p)
+  // eval bar/number track the variation when one is open; seeded "watch it"
+  // plies aren't engine-checked, so the bar holds at the branch-point eval
+  const shownEval = (va ? va.evals[vi] : null) ?? analysis?.evals[p] ?? 0
+  // variation SANs numbered from the branch ply, "12." / "12…" style
+  const vNum = (i: number) => {
+    const ply = p + i
+    return ply % 2 === 0 ? `${ply / 2 + 1}.` : i === 0 ? `${(ply + 1) / 2}…` : ''
+  }
   const blunderCount = analysis?.blunders.filter((b) => b.severity === 'blunder').length ?? 0
   const mistakeCount = (analysis?.blunders.length ?? 0) - blunderCount
   return (
@@ -583,18 +689,47 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
             <div>
               <div className="withbar">
                 <div className={'evalbar' + (analysis.color === 'b' ? ' flip' : '')}>
-                  <div className="wfill" style={{ height: `${winPct(analysis.evals[p] ?? 0)}%` }} />
+                  <div className="wfill" style={{ height: `${winPct(shownEval)}%` }} />
                 </div>
-                <Board size={446} onReady={(api) => (cg.current = api)} onMove={retryOn ? tryRetry : tryWhatIf} />
+                <Board size={446} onReady={(api) => (cg.current = api)} onMove={retryOn ? tryRetry : exploreMove} />
               </div>
+              {va && (
+                <div className="varbar">
+                  <button className="tiny" onClick={exitVar}>
+                    ✕ game
+                  </button>
+                  <span className="vmoves">
+                    {va.sans.map((s, i) => (
+                      <span
+                        key={i}
+                        className={'mv' + (i + 1 === vi ? ' cur' : '')}
+                        onClick={() => (setAuto(false), setVi(i + 1))}
+                      >
+                        {vNum(i)}
+                        {s}
+                      </span>
+                    ))}
+                  </span>
+                  <button className="tiny" onClick={() => (setAuto(false), setVi(Math.max(0, vi - 1)))}>
+                    ◀
+                  </button>
+                  <button
+                    className="tiny"
+                    onClick={() => (setAuto(false), setVi(Math.min(va.sans.length, vi + 1)))}
+                  >
+                    ▶
+                  </button>
+                </div>
+              )}
+              {va?.note && <div className="varnote">{va.note}</div>}
               <div className="boardfoot">
-                <b>eval {fmtEval(analysis.evals[p] ?? 0)}</b>
-                {p > 0 && analysis.judged[p - 1] && (
+                <b>eval {fmtEval(shownEval)}</b>
+                {!va && p > 0 && analysis.judged[p - 1] && (
                   <span className={'tglabel tg-' + analysis.judged[p - 1].tag}>
                     {moves[p - 1].san} — {analysis.judged[p - 1].tag}
                   </span>
                 )}
-                <span>← → or click a move</span>
+                <span>{va ? '← → steps the line · move a piece to branch' : '← → or click a move · move a piece to explore'}</span>
               </div>
             </div>
             <div className="side">
@@ -631,20 +766,12 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
                 <CoachNote
                   a={analysis}
                   bl={blCur}
-                  whatIfOn={whatIfOn}
-                  onToggleWhatIf={() => {
-                    setWhatIfOn((v) => !v)
-                    setWhatIf(null)
-                    setRetryOn(false)
-                    setRetry(null)
-                  }}
-                  whatIf={whatIf}
+                  onPlayLine={playLine}
                   retryOn={retryOn}
                   onToggleRetry={() => {
                     setRetryOn((v) => !v)
                     setRetry(null)
-                    setWhatIfOn(false)
-                    setWhatIf(null)
+                    exitVar()
                   }}
                   retry={retry}
                 />

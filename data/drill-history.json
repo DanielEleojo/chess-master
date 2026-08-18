@@ -1,5 +1,30 @@
 {
- "lines": {},
+ "lines": {
+  "Italian, vs Petrov": {
+   "seen": 2,
+   "missed": 0
+  },
+  "Caro-Kann, Exchange": {
+   "seen": 2,
+   "missed": 0
+  },
+  "vs Sicilian, Open": {
+   "seen": 2,
+   "missed": 0
+  },
+  "Italian, vs Philidor setup": {
+   "seen": 2,
+   "missed": 0
+  },
+  "Italian, Two Knights": {
+   "seen": 2,
+   "missed": 1
+  },
+  "Caro-Kann, vs 2.Qh5 Wayward Queen": {
+   "seen": 2,
+   "missed": 0
+  }
+ },
  "traps": {
   "Stafford Gambit, refuted#10": {
    "seen": 1,
@@ -96,6 +121,14 @@
    "at": "2026-08-04T09:36:46.096Z",
    "cards": 10,
    "good": 9
+  },
+  {
+   "mode": "lines",
+   "at": "2026-08-18T03:14:42.000Z",
+   "lines": 12,
+   "moves": 80,
+   "ok": 65,
+   "bestStreak": 18
   }
  ]
 }

@@ -66,10 +66,11 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Broken underpromotion puzzle card](tickets/034-broken-underpromotion-puzzle-card.md) — the UCI→SAN conversion was a red herring (already correct); the shared drill engine's promotion fallback (`src/lib/drill.ts`) hardcoded queen instead of reading the expected move's own piece, so `p:Oezqb`'s `f1=N` could never match. Fixed, Selftest's `every tactics card walks its own solution` check is green.
 
 - [Clone chess.com Game Review in Analysis mode](tickets/035-clone-chesscom-game-review.md) — the review now grades every move with chess.com's full badge set (Brilliant→Blunder) on lichess's open math — win%/accuracy formulas, a MultiPV-2 walk so Great can see the second-best move, Brilliant's "not already winning" read off that same second-best — names the opening from a vendored EPD-keyed lichess/chess-openings table (3,810 positions, CC0), and renders both players' accuracy, the eval graph/bar, and inline retry (engine best or within 50cp) in the mode-scoped `.ccr` chess.com skin; the 013 tactics feed is unchanged (mistake-grade and worse only), ANALYSIS_V 5 re-analyzes stale caches on open.
+- [Teach on the board](tickets/036-teach-on-the-board.md) — Daniel found 035's review hard to follow in prose, so the teaching moved onto the board, chess.com-style: "watch the right plan" / "watch the punishment" auto-play the engine's lines move by move, and the board is now always movable in review — any move branches a variation the engine answers on the board with a one-line cost-and-continuation note. 027's text-only "what if" retired in its favor; retry unchanged.
 
 ## Not yet specified
 
-(none — frontier is empty, all 35 tickets closed)
+(none — frontier is empty, all 36 tickets closed)
 
 ## Out of scope
 

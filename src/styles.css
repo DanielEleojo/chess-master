@@ -1006,6 +1006,38 @@ button.tiny:hover {
   font-weight: 700;
 }
 
+/* 036: the open variation — its moves under the board, teacher note below */
+.varbar {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+.varbar .vmoves {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-weight: 600;
+}
+.varbar .mv {
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+.varbar .mv.cur {
+  background: #ffff3399;
+  color: #1f1d1b;
+}
+.varnote {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 /* Sparring ladder (014) — rungs as a list you climb, beaten ones struck out */
 .rung {
   display: block;
