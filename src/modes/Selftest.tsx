@@ -12,9 +12,10 @@ import { softmaxPick, startEngine } from '../lib/engine'
 import { RUNGS } from './Spar'
 import { computeFacts } from '../lib/facts'
 import { MODEL, coachUp } from '../lib/coach'
-import type { Analysis } from '../lib/analyze'
+import type { Analysis, Tag } from '../lib/analyze'
 import { emptyHistory } from '../lib/history'
 import { CLUSTER_MIN, milestone, pickNext, ratingHistory } from '../lib/recommend'
+import { BOOK_SHARE, bandTarget, gapReport } from './NextRung'
 import { OWN_QUOTA, blunderCard, dealCards, type PCard } from '../lib/puzzles'
 import { moveKey, type LearnData } from '../lib/learn'
 
@@ -322,6 +323,33 @@ export function Selftest({
       ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
       ok('coach: trend measured against earlier games', m.trend === 44)
       ok('coach: no games, no milestone', milestone({}) === null)
+
+      // next rung (037) — band targets and the gap ranking over his own plies
+      ok(
+        'gap: band targets interpolate between rungs',
+        bandTarget(900).acc > bandTarget(800).acc && bandTarget(900).acc < bandTarget(1000).acc,
+      )
+      ok('gap: below the table clamps to the bottom band', bandTarget(100).blunders === bandTarget(400).blunders)
+      const gapA = (tags: Tag[], acc: number, evals = [0], book: Analysis['book'] = null): Analysis =>
+        mkA({ color: 'w', judged: tags.map((t) => ({ tag: t, acc: 50 })), acc: { w: acc, b: 50 }, evals, book })
+      // his moves are the even plies: one blunder, one mistake, the rest the opponent's
+      const messy = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['blunder', 'blunder', 'mistake', 'blunder'], 60) }))
+      const rMessy = gapReport(messy, 1000)
+      const gBl = rMessy.gaps.find((g) => g.key === 'blunders')
+      ok(
+        'gap: rates are per 100 of his own moves, not per game or per ply',
+        gBl?.mine === '50.0/100' && rMessy.gaps.find((g) => g.key === 'mistakes')?.mine === '50.0/100',
+      )
+      ok('gap: every gap ranks by shortfall and deep-links a mode', rMessy.gaps.length >= 3 && rMessy.gaps.every((g, i, xs) => !!g.mode && (i === 0 || xs[i - 1].score >= g.score)))
+      ok(`gap: no book match counts as out of book (>${BOOK_SHARE * 100}%)`, rMessy.gaps.some((g) => g.key === 'book'))
+      const inBook: Analysis['book'] = { line: 'Italian', matchedPlies: 6, leftAtPly: null, by: null, expectedSan: null, oppSan: null, outlived: false }
+      const clean = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['best', 'best', 'best', 'best'], 90, [0], inBook) }))
+      ok('gap: a scan already at the next rung reports no gaps', gapReport(clean, 1000).gaps.length === 0)
+      const thrown = [1, 2, 3, 4].map((i) => ({
+        game: { ...gr(i, 800), white: { username: 'BabaDaniel', result: 'resigned' }, black: { username: 'o', result: 'win' } },
+        a: gapA(['best', 'best'], 90, [900, 900], inBook),
+      }))
+      ok('gap: winning positions that end in losses are called out', gapReport(thrown, 1000).gaps.some((g) => g.key === 'convert'))
     } finally {
       setUser(wasUser)
     }

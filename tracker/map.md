@@ -68,9 +68,10 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Clone chess.com Game Review in Analysis mode](tickets/035-clone-chesscom-game-review.md) — the review now grades every move with chess.com's full badge set (Brilliant→Blunder) on lichess's open math — win%/accuracy formulas, a MultiPV-2 walk so Great can see the second-best move, Brilliant's "not already winning" read off that same second-best — names the opening from a vendored EPD-keyed lichess/chess-openings table (3,810 positions, CC0), and renders both players' accuracy, the eval graph/bar, and inline retry (engine best or within 50cp) in the mode-scoped `.ccr` chess.com skin; the 013 tactics feed is unchanged (mistake-grade and worse only), ANALYSIS_V 5 re-analyzes stale caches on open.
 - [Teach on the board](tickets/036-teach-on-the-board.md) — Daniel found 035's review hard to follow in prose, so the teaching moved onto the board, chess.com-style: "watch the right plan" / "watch the punishment" auto-play the engine's lines move by move, and the board is now always movable in review — any move branches a variation the engine answers on the board with a one-line cost-and-continuation note. 027's text-only "what if" retired in its favor; retry unchanged.
 
+- [Next rung — what's missing for the next milestone](tickets/037-next-rung-gap-report.md) — a standing scorecard behind the ladder: the last 10 rated games in the milestone's time class are measured against a band table (accuracy / blunders / mistakes **per 100 of his own moves** — per-game was ~4x off, his games end in 8 moves as often as 80), plus two rules no table covers: out-of-book share and winning positions not converted. The 400 rung is calibrated off his own analyzed games; rows he fails become deep-linked gap rows, rows he clears a footer line, and a rung he already clears escalates to the next one. `src/modes/NextRung.tsx`, no new CSS, the top gap phrased by the existing `coachPitch`.
 ## Not yet specified
 
-(none — frontier is empty, all 36 tickets closed)
+(none — frontier is empty, all 37 tickets closed)
 
 ## Out of scope
 

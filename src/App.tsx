@@ -15,9 +15,19 @@ import { Puzzles } from './modes/Puzzles'
 import { Analysis } from './modes/Analysis'
 import { Spar, RUNGS } from './modes/Spar'
 import { Learn } from './modes/Learn'
+import { NextRung, SCAN_N } from './modes/NextRung'
 import { Selftest } from './modes/Selftest'
 
-type Mode = 'home' | 'lines' | 'traps' | 'puzzles' | 'analysis' | 'spar' | 'learn' | 'selftest'
+type Mode =
+  | 'home'
+  | 'lines'
+  | 'traps'
+  | 'puzzles'
+  | 'analysis'
+  | 'spar'
+  | 'learn'
+  | 'nextrung'
+  | 'selftest'
 type Toast = { id: number; text: string }
 
 // "last synced Xs ago" — home screen only, no spinners (006)
@@ -251,6 +261,10 @@ export default function App() {
   if (mode === 'spar')
     return wrap(<Spar key={dealNo} lines={lines} onExit={() => setMode('home')} />)
   if (mode === 'learn') return wrap(<Learn key={dealNo} learn={learn} onExit={() => setMode('home')} />)
+  if (mode === 'nextrung')
+    return wrap(
+      <NextRung key={dealNo} lines={lines} ms={ms} onGo={go} onExit={() => setMode('home')} />,
+    )
   if (mode === 'selftest')
     return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} learn={learn} />)
 
@@ -274,6 +288,13 @@ export default function App() {
       {ms && <Climb ms={ms} />}
       <CoachCard history={h} unseen={unseenN} lines={lines} ms={ms} onGo={go} />
       <div className="ledger">
+        <button className="row" onClick={() => go('nextrung')}>
+          <span className="name">Next rung</span>
+          <span className="what">
+            what your last {SCAN_N} games say is missing for {ms ? ms.next : 'the next rung'}
+          </span>
+          <span className="stat">{ms ? <><b>{ms.next - ms.rating}</b> points to go</> : 'no rating yet'}</span>
+        </button>
         <button className="row" onClick={() => go('lines')}>
           <span className="name">Line drill</span>
           <span className="what">{lines.length} repertoire lines · misses come back</span>
