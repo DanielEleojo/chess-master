@@ -1,0 +1,451 @@
+// The app's one check (ticket 011, ported from the prototype's ?selftest=1).
+//
+// Headless on purpose: takes the parsed seed data, returns results, touches no
+// DOM and no network. That makes it reachable from three places — the Selftest
+// mode renders it, scripts/selftest.ts runs it in Node, and CI gates on it.
+// Checks that genuinely need a browser or a running server (the middleware
+// round-trip, the Stockfish worker, the coach ping) stay in the mode as
+// liveChecks() — they can't be honest here.
+
+import { Chess } from 'chess.js'
+import { parseGames, type Line } from './pgn'
+import { applyExtension, tailGrace } from './extend'
+import { makeDrill, userMoveIdxs } from './drill'
+import { buildDeck } from './traps'
+import { bump, emptyHistory, type Stat } from './history'
+import { USER, describeGame, gameParts, monthKey, newGames, setUser, type Game } from './sync'
+import { SPAR_TC, bookWalk, flagMoves, gameAcc, judgeMoves, moveAcc, sparGame, winPct } from './analyze'
+import { bookRun, epd, type Openings } from './openings'
+import { softmaxPick, RUNGS } from './spar'
+import { computeFacts } from './facts'
+import { CLUSTER_MIN, milestone, pickNext, ratingHistory } from './recommend'
+import { BOOK_SHARE, bandTarget, gapReport } from './gaps'
+import { OWN_QUOTA, blunderCard, dealCards, type PCard } from './puzzles'
+import { moveKey, type LearnData } from './learn'
+import type { Analysis, Tag } from './analyze'
+
+/** The parsed seed data every check runs against — the app loads it over HTTP,
+ *  scripts/selftest.ts reads the same files off disk. */
+export interface Seeds {
+  lines: Line[]
+  traps: Line[]
+  tactics: PCard[]
+  learn: LearnData
+}
+
+export interface Check {
+  name: string
+  pass: boolean
+}
+
+export function runChecks({ lines, traps, tactics, learn }: Seeds): Check[] {
+  const res: Check[] = []
+  const ok = (name: string, cond: boolean) => res.push({ name, pass: cond })
+
+
+  // ≥: accepted line extensions (020) legitimately grow the repertoire
+  ok(`repertoire parsed: ${lines.length} lines (expect >= 22)`, lines.length >= 22)
+  ok(`traps parsed: ${traps.length} traps (expect 15)`, traps.length === 15)
+  for (const l of [...lines, ...traps])
+    ok(
+      `${l.name}: ${l.moves.length} plies, has ${l.trainAs} moves`,
+      l.moves.length >= 2 && userMoveIdxs(l).length >= 1,
+    )
+  const commented = lines.filter((l) => Object.keys(l.comments).length > 0).length
+  ok(`repertoire why-comments survive parsing (${commented} lines have them)`, commented === lines.length)
+  // every miss must teach: each drillable user move carries a why-comment
+  const bare = lines.flatMap((l) =>
+    userMoveIdxs(l).filter((j) => !l.comments[l.moves[j].after]).map((j) => `${l.name}#${j}`),
+  )
+  ok(`every repertoire user move has a why (${bare.length} bare: ${bare.slice(0, 3).join(', ') || 'none'})`, bare.length === 0)
+
+  // Learn content (030/031/032): keying survives parsing and stays in sync
+  // with the shipped repertoire — validate-learn.mjs checks this at author
+  // time, this catches a live drift between the two files.
+  ok(
+    'moveKey formats move-number-qualified SAN',
+    moveKey(0, 'e4') === '1.e4' && moveKey(1, 'e5') === '1...e5' && moveKey(4, 'Bc4') === '3.Bc4',
+  )
+  for (const sys of ['Italian', 'Caro-Kann', 'Slav'])
+    ok(`learn: ${sys} brief is non-empty`, !!learn.systems[sys]?.plans && !!learn.systems[sys]?.pawnBreaks && !!learn.systems[sys]?.keySquares)
+  const learnGaps = lines.flatMap((l) =>
+    userMoveIdxs(l)
+      .filter((j) => l.comments[l.moves[j].after])
+      .filter((j) => !learn.lines[l.name]?.[moveKey(j, l.moves[j].san)])
+      .map((j) => `${l.name}#${j}`),
+  )
+  ok(
+    `every commented repertoire move has a learn.json entry (${learnGaps.length} gaps: ${learnGaps.slice(0, 3).join(', ') || 'none'})`,
+    learnGaps.length === 0,
+  )
+
+  const d = makeDrill(lines[0])
+  d.autoMoves()
+  ok('drill starts on user turn', !d.done() && d.expected().color === d.uc)
+  const w = d.tryMove('a2', 'a3')
+  ok('wrong move rejected and position restored', !w.ok && d.chess.fen() === new Chess().fen())
+  let steps = 0
+  while (!d.done() && steps++ < 40) {
+    const e = d.expected()
+    if (e.color === d.uc) {
+      if (!d.tryMove(e.from, e.to).ok) break
+    } else d.autoMoves()
+  }
+  ok('full line completes on correct moves', d.done())
+
+  const deck = buildDeck(traps)
+  ok(`trap deck: ${deck.length} cards (expect >= 15)`, deck.length >= 15)
+  const withWhy = deck.filter((c) => c.line.comments[c.line.moves[c.k].after]).length
+  ok(`every trap card carries a why-comment (${withWhy}/${deck.length})`, withWhy === deck.length)
+  let cardsOk = true
+  for (const c of deck) {
+    const cd = makeDrill(c.line, c.k)
+    const e = cd.expected()
+    if (e.color !== cd.uc || !cd.tryMove(e.from, e.to).ok) cardsOk = false
+  }
+  ok('every trap card starts on the punisher and accepts its move', cardsOk)
+
+  // grace first attempt (ticket 012): first-ever miss forgiven, hits and later misses count
+  const g: Record<string, Stat> = {}
+  bump(g, 'x', true)
+  ok('first-ever miss not recorded', g.x.seen === 1 && g.x.missed === 0)
+  bump(g, 'x', true)
+  ok('second miss recorded', g.x.seen === 2 && g.x.missed === 1)
+  bump(g, 'y', false)
+  ok('first-attempt hit credited', g.y.seen === 1 && g.y.missed === 0)
+
+  // live sync helpers (ticket 015)
+  const mk = (uuid: string, myResult: string, oppResult: string): Game => ({
+    uuid,
+    time_class: 'rapid',
+    white: { username: 'Opp', result: oppResult },
+    black: { username: 'BabaDaniel', result: myResult },
+  })
+  const won = mk('a', 'win', 'checkmated')
+  const lost = mk('b', 'timeout', 'win')
+  const drew = mk('c', 'stalemate', 'stalemate')
+  ok('sync diff finds only unseen uuids', newGames([won], [won, lost]).map((g) => g.uuid).join() === 'b')
+  ok('sync toast: win', describeGame(won) === 'You won vs Opp · rapid')
+  ok('sync toast: loss', describeGame(lost) === 'You lost vs Opp · rapid')
+  ok('sync toast: draw', describeGame(drew) === 'You drew vs Opp · rapid')
+  ok('month key is UTC YYYY-MM', /^\d{4}-\d{2}$/.test(monthKey(new Date())))
+
+  // analysis: book walk (ticket 016 — the left-book signal 003 feeds on)
+  const mkLine = (sans: string[], trainAs: 'White' | 'Black'): Line => {
+    const c = new Chess()
+    for (const s of sans) c.move(s)
+    return { idx: 0, name: sans.join(' '), system: 'T', trainAs, moves: c.history({ verbose: true }), comments: {} }
+  }
+  const book = [mkLine(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], 'White'), mkLine(['e4', 'c5', 'Nf3'], 'White')]
+  const whole = bookWalk(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5'], 'w', book)
+  ok('book: full-line match ends in book', whole?.leftAtPly === null && whole.matchedPlies === 5)
+  ok('book: outlived line carries the opponent continuation (020)', whole?.outlived === true && whole.oppSan === 'Bc5')
+  const covered = bookWalk(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], 'w', book)
+  ok('book: game ending inside the line is not outlived', covered?.outlived === false && covered.oppSan === null)
+  const meLeft = bookWalk(['e4', 'c5', 'Nc3'], 'w', book)
+  ok(
+    'book: my deviation flagged with expected move',
+    meLeft?.leftAtPly === 2 && meLeft.by === 'me' && meLeft.expectedSan === 'Nf3',
+  )
+  const oppLeft = bookWalk(['e4', 'd5'], 'w', book)
+  ok('book: opponent deviation flagged with their move (020)', oppLeft?.leftAtPly === 1 && oppLeft.by === 'opp' && oppLeft.oppSan === 'd5')
+  ok('book: never-in-book is null', bookWalk(['d4', 'd5'], 'w', book) === null)
+
+  // analysis: lichess's open accuracy math (035) — not reverse-engineered CAPS
+  ok('accuracy: win% is 50 at equal and symmetric', winPct(0) === 50 && Math.abs(winPct(120) + winPct(-120) - 100) < 1e-9)
+  ok('accuracy: win% saturates toward mate scores', winPct(9990) > 97 && winPct(-9990) < 3)
+  ok('accuracy: holding or gaining scores 100', moveAcc(50, 50) === 100 && moveAcc(40, 60) === 100)
+  ok('accuracy: a 30-win% drop scores like a blunder', moveAcc(80, 50) < 30)
+  const flat = gameAcc([20, 20, 20, 20, 20], 'w')
+  const rocky = gameAcc([20, 20, 20, -400, -400], 'w') // white throws it on his 2nd move
+  ok(`accuracy: steady game near-perfect (${flat.toFixed(1)}), thrown game far below (${rocky.toFixed(1)})`, flat > 95 && rocky < flat - 30)
+  ok('accuracy: a colour with no moves grades 100', gameAcc([20], 'b') === 100)
+
+  // analysis: move taxonomy (035) — chess.com's badges on lichess thresholds
+  const bg = new Chess()
+  for (const s of ['e4', 'e5', 'Qh5']) bg.move(s)
+  const bm = bg.history({ verbose: true })
+  const noPv = [[], [], ['g1f3', 'b8c6'], []]
+  const jBook = judgeMoves(bm, [20, 30, 20, -400], [null, null, null, null], noPv, 2)
+  ok('taxonomy: theory plies wear the book badge', jBook[0].tag === 'book' && jBook[1].tag === 'book')
+  ok('taxonomy: a ~32-win% drop is a blunder', jBook[2].tag === 'blunder')
+  const jFlag = judgeMoves(bm, [20, 30, 20, -400], [null, null, null, null], noPv, 0)
+  ok('taxonomy: quiet non-best moves grade excellent', jFlag[0].tag === 'excellent' && jFlag[1].tag === 'excellent')
+  const jBest = judgeMoves(bm, [20, 30, 20, -400], [null, 300, null, null], [['e2e4'], ['e7e5'], [], []], 0)
+  ok('taxonomy: the engine move is best; best with a losing second choice is great', jBest[0].tag === 'best' && jBest[1].tag === 'great')
+  const jMiss = judgeMoves(bm, [20, 30, 400, 50], [null, null, null, null], noPv, 0)
+  ok('taxonomy: letting a winning position slip is a miss', jMiss[2].tag === 'miss')
+  // smothered-mate queen sac: Qg8+!! Rxg8 Nf7# — best, gives the queen, and
+  // the second-best move was NOT already winning big
+  const brC = new Chess('5r1k/6pp/7N/8/2Q5/8/8/6K1 w - - 0 1')
+  brC.move('Qg8+')
+  const brM = brC.history({ verbose: true })
+  const jBr = judgeMoves(brM, [9997, 9998], [100], [['c4g8', 'f8g8', 'h6f7']], 0)
+  ok('taxonomy: a mate sacrifice is brilliant', jBr[0].tag === 'brilliant')
+  const jBrEasy = judgeMoves(brM, [9997, 9998], [900], [['c4g8', 'f8g8', 'h6f7']], 0)
+  ok('taxonomy: the same sac while trivially winning anyway is not', jBrEasy[0].tag !== 'brilliant')
+
+  // analysis: the 013 card feed off the taxonomy — mistake-grade and worse only
+  const flags = flagMoves(bm, [20, 30, 20, -400], noPv, 'w', jFlag)
+  ok(
+    'flag: blunder-tagged move flagged with best move',
+    flags.length === 1 && flags[0].ply === 2 && flags[0].severity === 'blunder' && flags[0].bestSan === 'Nf3',
+  )
+  ok('flag: fen is the position before the move (013 card shape)', flags[0]?.fen === bm[2].before)
+  ok('flag: pv converts to san (the why line)', flags[0]?.pvSan.join(' ') === 'Nf3 Nc6')
+  const jB = judgeMoves(bm, [0, 0, 250, 250], [null, null, null, null], noPv, 0)
+  const bFlags = flagMoves(bm, [0, 0, 250, 250], noPv, 'b', jB)
+  ok('flag: black sign handled, a 22-win% drop = mistake', bFlags.length === 1 && bFlags[0].ply === 1 && bFlags[0].severity === 'mistake')
+  const jQ = judgeMoves(bm, [20, 25, 20, 30], [null, null, null, null], noPv, 0)
+  ok('flag: quiet moves stay unflagged', flagMoves(bm, [20, 25, 20, 30], noPv, 'w', jQ).length === 0)
+  const jMissFeed = flagMoves(bm, [20, 30, 400, 50], noPv, 'w', jMiss)
+  ok('flag: a miss deals a card as a mistake', jMissFeed.length === 1 && jMissFeed[0].severity === 'mistake')
+  const pFlags = flagMoves(bm, [20, 30, 20, -400], [[], [], ['g1f3'], ['d8h4']], 'w', jFlag)
+  ok('flag: punish line stored in san (017 facts input)', pFlags[0]?.punishSan.join(' ') === 'Qh4')
+
+  // openings book run (035): EPD-keyed real theory, a broken chain stays broken
+  const om: Openings = new Map()
+  const oc = new Chess()
+  oc.move('e4')
+  om.set(epd(oc.fen()), "B00 King's Pawn Game")
+  oc.move('e5')
+  om.set(epd(oc.fen()), "C20 King's Pawn Game")
+  const og = new Chess()
+  for (const s of ['e4', 'e5', 'Nf3']) og.move(s)
+  const fensAfter = og.history({ verbose: true }).map((m) => m.after)
+  const run = bookRun(fensAfter, om)
+  ok('openings: unbroken theory prefix counted, deepest name kept', run.plies === 2 && run.name === "C20 King's Pawn Game")
+  const broken = bookRun([fensAfter[0], og.fen(), fensAfter[1]], om)
+  ok('openings: leaving theory closes the book for good', broken.plies === 1 && broken.name === "B00 King's Pawn Game")
+  ok('openings: move 1 out of theory is no opening', bookRun([og.fen()], om).plies === 0 && bookRun([og.fen()], om).name === null)
+
+  // fact layer (ticket 017, ADR 0001) — the deterministic truths under the coach voice
+  const fool = new Chess()
+  fool.move('f3'), fool.move('e5')
+  const fMate = computeFacts({ fen: fool.fen(), played: 'g4', best: 'd4', bestLine: ['d4'], punishLine: ['Qh4#'], swingCp: 9900 })
+  ok('facts: mate in the punish line reported', fMate.some((s) => s.includes('checkmate')))
+  const hq = new Chess()
+  for (const s of ['e4', 'e5', 'Qh5', 'Nc6']) hq.move(s)
+  const fHang = computeFacts({ fen: hq.fen(), played: 'Qxe5+', best: 'Nc3', bestLine: ['Nc3'], punishLine: ['Nxe5'], swingCp: 780 })
+  ok('facts: hung queen reported', fHang.some((s) => s.includes('queen') && s.includes('takes it')))
+  const fFork = computeFacts({ fen: '6k1/8/8/2b5/8/8/PR3R2/6K1 w - - 0 1', played: 'a3', best: 'Rb5', bestLine: ['Rb5'], punishLine: ['Bd4', 'a4', 'Bxb2'], swingCp: 300 })
+  ok('facts: fork spotted', fFork.some((s) => s.includes('forks both your rooks')))
+  ok('facts: material along the punish line', fFork.some((s) => s.includes('wins your rook')))
+  const cstl = new Chess()
+  cstl.move('e4'), cstl.move('e5')
+  const fK = computeFacts({ fen: cstl.fen(), played: 'Ke2', best: 'Nf3', bestLine: ['Nf3'], punishLine: ['Nc6'], swingCp: 40 })
+  ok('facts: bare king move loses castling', fK.some((s) => s.includes('castling')))
+  const fBest = computeFacts({ fen: (() => { const c = new Chess(); c.move('e4'), c.move('d5'); return c.fen() })(), played: 'a3', best: 'exd5', bestLine: ['exd5'], punishLine: ['dxe4'], swingCp: 120 })
+  ok('facts: best-line material win reported', fBest.some((s) => s.includes('exd5 wins a pawn')))
+  const fQuiet = computeFacts({ fen: new Chess().fen(), played: 'a3', best: 'e4', bestLine: ['e4'], punishLine: ['e5'], swingCp: 60 })
+  ok('facts: quiet miss falls back to positional', fQuiet.length === 1 && fQuiet[0].includes('positional'))
+
+  // coach recommender (ticket 018) — deterministic ladder + milestone ladder
+  const mkA = (over: Partial<Analysis>): Analysis => ({
+    uuid: 'u', at: '', v: 3, ms: 300, color: 'w', desc: '', endTime: 0, evals: [],
+    judged: [], acc: { w: 100, b: 100 }, opening: null, blunders: [], book: null, ...over,
+  })
+  const leftBook = (line: string): Analysis =>
+    mkA({ book: { line, matchedPlies: 4, leftAtPly: 4, by: 'me', expectedSan: 'Bc4', oppSan: null, outlived: false } })
+  const oppBook = (line: string, oppSan = 'd5', ply = 4): Analysis =>
+    mkA({ book: { line, matchedPlies: ply, leftAtPly: ply, by: 'opp', expectedSan: null, oppSan, outlived: false } })
+  const outBook = (line: string): Analysis =>
+    mkA({ book: { line, matchedPlies: 6, leftAtPly: null, by: null, expectedSan: null, oppSan: 'c4', outlived: true } })
+  const blunderAt = (ply: number): Analysis =>
+    mkA({ blunders: [{ ply, san: '', fen: '', best: '', bestSan: '', pvSan: [], punishSan: [], swingCp: 300, severity: 'blunder' }] })
+  ok('coach: unseen games top the ladder', pickNext(3, [leftBook('X'), leftBook('X')], emptyHistory()).kind === 'new-games')
+  const pLeft = pickNext(0, [leftBook('X'), leftBook('X'), blunderAt(20), blunderAt(25), blunderAt(30)], emptyHistory())
+  ok('coach: repeated left line beats blunder cluster, deep-links the line', pLeft.kind === 'left-line' && pLeft.focusLine === 'X' && pLeft.mode === 'lines')
+  ok('coach: one departure is not a weakness', pickNext(0, [leftBook('X')], emptyHistory()).kind !== 'left-line')
+  const pClu = pickNext(0, [blunderAt(20), blunderAt(25), blunderAt(30)], emptyHistory())
+  ok(`coach: ${CLUSTER_MIN} same-phase blunders called as a cluster`, pClu.kind === 'blunder-cluster' && pClu.evidence[0].includes('middlegame'))
+  const wh = emptyHistory()
+  wh.lines['Italian main line'] = { seen: 6, missed: 4 }
+  const pWeak = pickNext(0, [], wh)
+  ok('coach: weak drill stat picked with evidence', pWeak.kind === 'weak-drill' && pWeak.focusLine === 'Italian main line' && pWeak.evidence[0].includes('4 of 6'))
+  ok('coach: clean data falls back to default reps', pickNext(0, [], emptyHistory()).kind === 'default')
+
+  // inactivity rung (023/024) — leads the ladder, folds in the fallback pick
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString()
+  const quietH = emptyHistory()
+  quietH.sessions = [{ mode: 'lines', at: daysAgo(6) }]
+  const pQuiet = pickNext(0, [], quietH)
+  ok(
+    'coach: 6 days quiet leads with inactivity, folds in the fallback pick',
+    pQuiet.kind === 'inactive' && pQuiet.title.includes('6 days') && pQuiet.mode === 'lines',
+  )
+  ok('coach: inactivity outranks even unseen games', pickNext(3, [], quietH).kind === 'inactive')
+  const freshH = emptyHistory()
+  freshH.sessions = [{ mode: 'lines', at: daysAgo(1) }]
+  ok('coach: 1 day quiet does not trigger inactivity', pickNext(0, [], freshH).kind !== 'inactive')
+
+  // line extension (tickets 019/020) — trigger, rung, dismissal, grace, PGN append
+  const pBr = pickNext(0, [oppBook('X'), oppBook('X')], emptyHistory())
+  ok('extend: opp-left same break twice proposes a branch', pBr.kind === 'extend' && pBr.ext?.kind === 'branch' && pBr.ext.oppSan === 'd5')
+  ok('extend: one surprise is not a trigger', pickNext(0, [oppBook('X')], emptyHistory()).kind !== 'extend')
+  ok('extend: different moves at the break do not pool', pickNext(0, [oppBook('X', 'd5'), oppBook('X', 'c5')], emptyHistory()).kind !== 'extend')
+  const pTail = pickNext(0, [outBook('Y'), outBook('Y')], emptyHistory())
+  ok('extend: outlived line twice proposes a tail', pTail.kind === 'extend' && pTail.ext?.kind === 'tail' && pTail.ext.ply === 6)
+  ok('extend: daniel-left rung outranks extension', pickNext(0, [leftBook('X'), leftBook('X'), outBook('Y'), outBook('Y')], emptyHistory()).kind === 'left-line')
+  const dis = { dismissed: [{ line: 'Y', ply: 6, oppSan: 'c4', games: 2 }], preLen: {} }
+  ok('extend: dismissed break sleeps', pickNext(0, [outBook('Y'), outBook('Y')], emptyHistory(), dis).kind !== 'extend')
+  ok('extend: a new game re-hitting the break re-proposes', pickNext(0, [outBook('Y'), outBook('Y'), outBook('Y')], emptyHistory(), dis).kind === 'extend')
+
+  const ge = { dismissed: [], preLen: { Z: 4 } }
+  ok('extend: miss on old plies is not graced', !tailGrace(ge, 'Z', 2) && ge.preLen.Z === 4)
+  ok('extend: first miss beyond pre-extension length graced once', tailGrace(ge, 'Z', 5) && !tailGrace(ge, 'Z', 5))
+  ok('extend: unextended line never graced', !tailGrace(ge, 'Q', 9))
+
+  const rawRep =
+    '[Event "Repertoire: T1"]\n[System "T"]\n[TrainAs "White"]\n[Result "*"]\n\n1. e4 {why e4} e5 2. Nf3 {why Nf3} *'
+  const tLine = parseGames(rawRep)[0]
+  const tOut = applyExtension(rawRep, tLine, { line: 'T1', ply: 3, oppSan: 'Nc6', kind: 'tail', games: 2 }, ['Nc6', 'Bc4'])
+  const tp = parseGames(tOut)
+  ok('extend: tail rewrites the line in place', tp.length === 1 && tp[0].name === 'T1' && tp[0].moves.length === 5 && tp[0].moves[4].san === 'Bc4')
+  ok('extend: old why-comments survive the rewrite', tp[0]?.comments[tp[0].moves[0].after] === 'why e4')
+  ok('extend: new user plies carry a why', !!tp[0]?.comments[tp[0].moves[4].after])
+  const bOut = applyExtension(rawRep, tLine, { line: 'T1', ply: 1, oppSan: 'c5', kind: 'branch', games: 2 }, ['c5', 'Nf3', 'd6', 'd4'])
+  const bp = parseGames(bOut)
+  ok(
+    'extend: branch appends a new line sharing the prefix',
+    bp.length === 2 && bp[1].name === 'T1 (c5 branch)' && bp[1].moves.map((m) => m.san).join(' ') === 'e4 c5 Nf3 d6 d4',
+  )
+  ok('extend: branch user plies carry a why', bp.length === 2 && userMoveIdxs(bp[1]).every((j) => !!bp[1].comments[bp[1].moves[j].after]))
+  const gr = (t: number, rating: number, tc = 'rapid'): Game => ({
+    uuid: String(t), time_class: tc, rated: true, end_time: t,
+    white: { username: 'BabaDaniel', result: 'win', rating },
+    black: { username: 'o', result: 'resigned' },
+  })
+  // ratingHistory matches against the live USER — 028: on a fresh load this
+  // races App's own account resolution, so pin it for these fixtures and
+  // put it back rather than depend on that resolution having finished.
+  const wasUser = USER
+  setUser('babadaniel')
+  try {
+    const rh = ratingHistory([gr(3, 344), gr(1, 300), gr(2, 320), gr(1, 100, 'bullet'), { ...gr(4, 999), rated: false }])
+    ok('coach: rating history per class, sorted, rated only', rh.rapid?.length === 3 && rh.rapid[2].rating === 344 && rh.bullet?.length === 1)
+    const m = milestone(rh)!
+    ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
+    ok('coach: trend measured against earlier games', m.trend === 44)
+    ok('coach: no games, no milestone', milestone({}) === null)
+
+    // next rung (037) — band targets and the gap ranking over his own plies
+    ok(
+      'gap: band targets interpolate between rungs',
+      bandTarget(900).acc > bandTarget(800).acc && bandTarget(900).acc < bandTarget(1000).acc,
+    )
+    ok('gap: below the table clamps to the bottom band', bandTarget(100).blunders === bandTarget(400).blunders)
+    const gapA = (tags: Tag[], acc: number, evals = [0], book: Analysis['book'] = null): Analysis =>
+      mkA({ color: 'w', judged: tags.map((t) => ({ tag: t, acc: 50 })), acc: { w: acc, b: 50 }, evals, book })
+    // his moves are the even plies: one blunder, one mistake, the rest the opponent's
+    const messy = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['blunder', 'blunder', 'mistake', 'blunder'], 60) }))
+    const rMessy = gapReport(messy, 1000)
+    const gBl = rMessy.gaps.find((g) => g.key === 'blunders')
+    ok(
+      'gap: rates are per 100 of his own moves, not per game or per ply',
+      gBl?.mine === '50.0/100' && rMessy.gaps.find((g) => g.key === 'mistakes')?.mine === '50.0/100',
+    )
+    ok('gap: every gap ranks by shortfall and deep-links a mode', rMessy.gaps.length >= 3 && rMessy.gaps.every((g, i, xs) => !!g.mode && (i === 0 || xs[i - 1].score >= g.score)))
+    ok(`gap: no book match counts as out of book (>${BOOK_SHARE * 100}%)`, rMessy.gaps.some((g) => g.key === 'book'))
+    const inBook: Analysis['book'] = { line: 'Italian', matchedPlies: 6, leftAtPly: null, by: null, expectedSan: null, oppSan: null, outlived: false }
+    const clean = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['best', 'best', 'best', 'best'], 90, [0], inBook) }))
+    ok('gap: a scan already at the next rung reports no gaps', gapReport(clean, 1000).gaps.length === 0)
+    const thrown = [1, 2, 3, 4].map((i) => ({
+      game: { ...gr(i, 800), white: { username: 'BabaDaniel', result: 'resigned' }, black: { username: 'o', result: 'win' } },
+      a: gapA(['best', 'best'], 90, [900, 900], inBook),
+    }))
+    ok('gap: winning positions that end in losses are called out', gapReport(thrown, 1000).gaps.some((g) => g.key === 'convert'))
+  } finally {
+    setUser(wasUser)
+  }
+
+  // tactics deck (ticket 013) — fen-rooted cards walked by the shared drill engine
+  ok(`tactics deck loaded: ${tactics.length} cards (expect >= 300)`, tactics.length >= 300)
+  const brokeCards: string[] = []
+  for (const c of tactics) {
+    const cd = makeDrill(c.line, c.start)
+    let steps = 0
+    while (!cd.done() && steps++ < 12) {
+      const e = cd.expected()
+      if (e.color === cd.uc) {
+        if (!cd.tryMove(e.from, e.to).ok) break
+      } else cd.autoMoves()
+    }
+    if (!cd.done()) brokeCards.push(c.key)
+  }
+  ok(`every tactics card walks its own solution (${brokeCards.slice(0, 3).join(', ') || 'none broken'})`, brokeCards.length === 0)
+  ok(
+    'tactics cards start on his turn, after the move that walked into it',
+    tactics.every((c) => c.line.moves[c.start].color === (c.line.trainAs === 'White' ? 'w' : 'b')),
+  )
+  ok(
+    'tactics cards are 1-2 moves for him (no veryLong grinds)',
+    tactics.every((c) => Math.ceil((c.line.moves.length - c.start) / 2) <= 2),
+  )
+  const bCard = blunderCard(mkA({ uuid: 'g1', desc: 'You lost vs X · rapid' }), {
+    ply: 10, san: 'Qd5', fen: 'r1bqkbnr/pppp1pp1/2n4p/8/2B1P3/2p2N2/PP3PPP/RNBQK2R w KQkq - 0 6',
+    best: 'e1g1', bestSan: 'O-O', pvSan: ['O-O', 'Nf6'], punishSan: [], swingCp: 104, severity: 'mistake',
+  })!
+  ok(
+    'his own flagged move becomes a card starting on his turn',
+    !!bCard && bCard.start === 0 && bCard.own && bCard.line.moves[0].san === 'O-O',
+  )
+  ok('own card names the move he missed and why (017 fact layer)', bCard?.why.startsWith('O-O') && bCard.why.length > 12)
+  const pool = tactics.slice(0, 50)
+  const mineCards = Array.from({ length: 9 }, (_, i) => ({ ...bCard, key: 'o:' + i }))
+  const dealt10 = dealCards(pool, mineCards, emptyHistory())
+  ok(
+    `deal reserves ${OWN_QUOTA} of 10 cards for his own mistakes`,
+    dealt10.length === 10 && dealt10.filter((c) => c.own).length === OWN_QUOTA,
+  )
+  ok('coach deep-link deals his own positions only', dealCards(pool, mineCards, emptyHistory(), true).every((c) => c.own))
+  ok('no flagged games yet: deal still fills from lichess', dealCards(pool, [], emptyHistory(), true).length === 10)
+  ok('coach: non-opening cluster deals those positions back as cards (013)', pClu.mode === 'puzzles' && pClu.ownOnly === true)
+
+  // sparring (014): the softmax is what makes the low rungs beatable — temp 0
+  // must never stray, and the floor's temp must actually reach the bad moves
+  const cands = [
+    { mv: 'e2e4', cp: 30 },
+    { mv: 'g1f3', cp: -20 },
+    { mv: 'b1a3', cp: -300 },
+    { mv: 'g2g4', cp: -900 },
+  ]
+  ok(
+    'spar: temp 0 always plays the top candidate',
+    Array.from({ length: 30 }, () => softmaxPick(cands, 0)).every((m) => m === 'e2e4'),
+  )
+  const roll = (temp: number) =>
+    Array.from({ length: 400 }, () => softmaxPick(cands, temp)).filter((m) => m === 'g2g4').length
+  const floor = roll(RUNGS[0].temp)
+  ok(`spar: the floor (temp ${RUNGS[0].temp}) hangs the -900cp move sometimes (${floor}/400)`, floor > 20 && floor < 200)
+  const improver = roll(RUNGS[3].temp)
+  ok(`spar: rungs are ordered — Improver hangs it far less (${improver}/400)`, improver < floor / 2)
+
+  // a finished spar game is recorded as one of his games, so the existing walk
+  // flags it and the coach reads it with no rung of its own
+  const spLoss = new Chess()
+  for (const s of ['f3', 'e5', 'g4', 'Qh4#']) spLoss.move(s)
+  const sg = sparGame(spLoss, 'w', 'Rookie', false, 1000)
+  ok(
+    'spar: game recorded as his own, unrated (milestone ladder stays real)',
+    sg.uuid === 'spar-1000' && sg.white.username === USER && sg.time_class === SPAR_TC && sg.rated === false,
+  )
+  ok(
+    'spar: being mated reads as a loss',
+    describeGame(sg) === 'You lost vs Rookie · sparring' && gameParts(sg).mark === '0',
+  )
+  const spBack = new Chess()
+  spBack.loadPgn(sg.pgn)
+  ok('spar: the game survives as pgn for the engine walk', spBack.history().join(' ') === 'f3 e5 g4 Qh4#')
+  const spWin = new Chess()
+  for (const s of ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#']) spWin.move(s)
+  ok('spar: his own mate reads as a win', gameParts(sparGame(spWin, 'w', 'Rookie', false, 1)).mark === '1')
+  ok('spar: resigning is a loss whatever the board says', gameParts(sparGame(spWin, 'w', 'Careless', true, 2)).mark === '0')
+  ok(
+    'spar: stalemate is a half point',
+    gameParts(sparGame(new Chess('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1'), 'b', 'Rookie', false, 3)).mark === '½',
+  )
+
+
+  return res
+}

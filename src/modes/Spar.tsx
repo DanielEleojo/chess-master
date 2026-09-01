@@ -3,7 +3,8 @@ import { Chess } from 'chess.js'
 import type { Api } from 'chessground/api'
 import { Board, syncBoard } from '../components/Board'
 import { ModeHead } from '../components/ModeHead'
-import { startEngine, type Engine, type Weak } from '../lib/engine'
+import { startEngine, type Engine } from '../lib/engine'
+import { RUNGS, WINS_TO_CLIMB, type Weak } from '../lib/spar'
 import { saveSparGame, sparGame } from '../lib/analyze'
 import { beep } from '../lib/fx'
 import { sanUpto } from '../lib/drill'
@@ -15,47 +16,6 @@ import type { Line } from '../lib/pgn'
 // ordering defends scholar's mate on one node. Daniel still lost to the floor, so
 // 002's MultiPV softmax is now the dial: search wide enough to *have* candidates,
 // then pick sloppily among them. `temp` (centipawns) is the sloppiness.
-export const RUNGS: (Weak & { name: string; blurb: string })[] = [
-  {
-    name: 'Careless',
-    nodes: 500,
-    multipv: 8,
-    temp: 900,
-    blurb: 'hangs pieces for free — the floor',
-  },
-  {
-    name: 'Rookie',
-    nodes: 500,
-    multipv: 6,
-    temp: 350,
-    blurb: 'blunders often, misses your threats',
-  },
-  {
-    name: 'Beginner',
-    nodes: 800,
-    multipv: 4,
-    temp: 140,
-    blurb: 'takes what you leave hanging, no plan',
-  },
-  {
-    name: 'Improver',
-    nodes: 4000,
-    multipv: 3,
-    temp: 55,
-    blurb: 'punishes loose pieces, spots short tactics',
-  },
-  {
-    name: 'Club player',
-    nodes: 40000,
-    multipv: 1,
-    temp: 0,
-    blurb: 'always its best move — you need a real idea',
-  },
-]
-
-// Round 4 (Daniel): one win is luck, two is a level. The climb knob.
-export const WINS_TO_CLIMB = 2
-
 const knobs = (r: Weak) =>
   r.temp === 0
     ? `${r.nodes} nodes · always best`

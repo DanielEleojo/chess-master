@@ -1,34 +1,15 @@
 // Stockfish lite single-threaded (ticket 002) as a classic Web Worker — plain
 // UCI strings in, info/bestmove lines out. One engine, serial eval queue.
 import sfUrl from 'stockfish/bin/stockfish-18-lite-single.js?url'
+// spar.ts holds the weakening knobs and the pick, and imports nothing from
+// here — so the selftest reaches them without dragging in the ?url above.
+import { softmaxPick, type Weak } from './spar'
 
 export interface Score {
   cp: number // side-to-move perspective; mate-in-N mapped to ±(10000 − N)
   best: string | null // uci, e.g. e2e4
   pv: string[] // principal variation in uci — the "why" behind best
   cp2: number | null // second-best move's score when asked at multipv 2 (035's Great)
-}
-
-// Sparring strength (014). Node caps alone were not enough — even `nodes 1`
-// defends scholar's mate, so the real dial is *randomness*: search wide, then
-// pick from the candidates with a softmax. `temp` is in centipawns — the loss a
-// move can carry and still get played ~37% as often as the best one.
-// No Skill Level here: it only rewrites Stockfish's *bestmove*, which this
-// discards in favour of its own pick — measured inert, so it's gone.
-export interface Weak {
-  nodes: number
-  multipv: number
-  temp: number // 0 = always the top move
-}
-
-// exported for the selftest — pure, no engine needed
-export function softmaxPick(cands: { mv: string; cp: number }[], temp: number): string {
-  if (temp <= 0) return cands[0].mv
-  const top = Math.max(...cands.map((c) => c.cp))
-  const ws = cands.map((c) => Math.exp(Math.max(c.cp - top, -4000) / temp))
-  let r = Math.random() * ws.reduce((a, b) => a + b, 0)
-  for (let i = 0; i < ws.length; i++) if ((r -= ws[i]) <= 0) return cands[i].mv
-  return cands[0].mv
 }
 
 export interface Engine {

@@ -1,37 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Api } from 'chessground/api'
 import type { Line } from '../lib/pgn'
-import { makeDrill, sanUpto, userMoveIdxs, type Drill } from '../lib/drill'
+import { makeDrill, sanUpto, type Drill } from '../lib/drill'
+import { buildDeck, type Card } from '../lib/traps'
 import { Board, syncBoard } from '../components/Board'
 import { ModeHead } from '../components/ModeHead'
 import { beep, shake, useLater } from '../lib/fx'
 import { bump, byWeakness, saveHistory, type History } from '../lib/history'
-
-export interface Card {
-  line: Line
-  k: number // ply index of the punishing move to find
-  key: string
-  retry?: boolean // requeued copy of a missed card — doesn't touch history
-}
-
-// One card per commented punisher move — the comment is the "why" shown on the
-// card. Traps with no commented punisher move (pure mates) quiz the final blow.
-export function buildDeck(traps: Line[]): Card[] {
-  const deck: Card[] = []
-  for (const t of traps) {
-    const uc = t.trainAs === 'White' ? 'w' : 'b'
-    const commented = t.moves
-      .map((m, j) => ({ m, j }))
-      .filter(({ m }) => m.color === uc && t.comments[m.after])
-    const picks = commented.length
-      ? commented
-      : userMoveIdxs(t)
-          .slice(-1)
-          .map((j) => ({ m: t.moves[j], j }))
-    for (const { j } of picks) deck.push({ line: t, k: j, key: `${t.name}#${j}` })
-  }
-  return deck
-}
 
 const DEAL = 10
 
