@@ -1,9 +1,9 @@
 name: CI
 
-on:
-  push:
-    branches: [master]
-  pull_request:
+# Every push, any branch — this repo is worked on directly, so gating only
+# master would mean finding out late. Add `pull_request:` here if outside
+# contributions ever need checking before merge.
+on: push
 
 jobs:
   check:
