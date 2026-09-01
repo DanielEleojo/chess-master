@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # `npm run check` shells out to wrangler for the Worker types; it needs no
+      # Cloudflare credentials, but it will try to ask about telemetry on a cold
+      # runner if this is unset.
+      WRANGLER_SEND_METRICS: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck app and worker
+        run: npm run check
+      - name: Selftest
+        run: npm test
