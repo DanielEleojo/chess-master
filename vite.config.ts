@@ -11,6 +11,10 @@ function dataApi(): Plugin {
   return {
     name: 'data-api',
     configureServer(server) {
+      // data/ holds one account's own state and isn't tracked, so a fresh
+      // clone has neither directory — the archives listing below readdir's
+      // one of them, and every PUT writes into the other.
+      fs.mkdirSync(path.join(DATA, 'archives'), { recursive: true })
       // PUT /api/repertoire — accepted line extensions (020) rewrite the PGN;
       // the client validated by re-parsing, git catches anything else.
       server.middlewares.use('/api/repertoire', (req, res) => {
