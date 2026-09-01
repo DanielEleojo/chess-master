@@ -2,12 +2,11 @@
 // chess.com, diff by uuid, persist via the data middleware, surface arrivals.
 // Plain fetch: the browser HTTP cache does the ETag 304 revalidation (004).
 
-// Per-account chess.com username (multi-account): set once at boot via
-// account.ts, empty until then so an unset account just syncs nothing.
-export let USER = ''
-export function setUser(u: string): void {
-  USER = u
-}
+// Per-account chess.com username (multi-account): resolved at boot by
+// account.ts and threaded to whatever needs it. It used to be a mutable
+// module-level global that these functions read ambiently — which is what
+// raced App's async resolution in ticket 028. Now "whose game is this?" is
+// visible at every call site, and these three are genuinely pure.
 
 export interface Game {
   uuid: string
@@ -38,8 +37,8 @@ const DRAWS = new Set([
 
 // His result in a game, crosstable-style: 1 won, 0 lost, ½ drew — plus the
 // opponent, so the analysis list can column them instead of writing a sentence.
-export function gameParts(g: Game) {
-  const meWhite = g.white.username.toLowerCase() === USER
+export function gameParts(g: Game, user: string) {
+  const meWhite = g.white.username.toLowerCase() === user
   const me = meWhite ? g.white : g.black
   const cls = me.result === 'win' ? 'win' : DRAWS.has(me.result) ? 'draw' : 'loss'
   return {
@@ -50,8 +49,8 @@ export function gameParts(g: Game) {
   }
 }
 
-export function describeGame(g: Game): string {
-  const meWhite = g.white.username.toLowerCase() === USER
+export function describeGame(g: Game, user: string): string {
+  const meWhite = g.white.username.toLowerCase() === user
   const me = meWhite ? g.white : g.black
   const opp = meWhite ? g.black : g.white
   const verb = me.result === 'win' ? 'won' : DRAWS.has(me.result) ? 'drew' : 'lost'
@@ -78,7 +77,7 @@ export interface SyncEvents {
 }
 
 // Cadence per 006: 10s visible / 60s hidden / 5s burst for ~3 min after an arrival.
-export function startSync(ev: SyncEvents): () => void {
+export function startSync(user: string, ev: SyncEvents): () => void {
   let stopped = false
   let busy = false
   let burstUntil = 0
@@ -92,7 +91,7 @@ export function startSync(ev: SyncEvents): () => void {
     try {
       const month = monthKey(new Date())
       const r = await fetch(
-        `https://api.chess.com/pub/player/${USER}/games/${month.replace('-', '/')}`,
+        `https://api.chess.com/pub/player/${user}/games/${month.replace('-', '/')}`,
       )
       if (r.ok) {
         const fetched: Game[] = (await r.json()).games ?? []
@@ -115,7 +114,7 @@ export function startSync(ev: SyncEvents): () => void {
           burstUntil = Date.now() + 3 * 60_000
           ev.onArrivals(
             // ponytail: cap the backlog case (app closed for days) at one summary toast
-            fresh.length > 3 ? [`${fresh.length} new games synced`] : fresh.map(describeGame),
+            fresh.length > 3 ? [`${fresh.length} new games synced`] : fresh.map((g) => describeGame(g, user)),
           )
         }
         ev.onSynced(Date.now())

@@ -6,7 +6,7 @@
 import type { Analysis } from './analyze'
 import { emptyExt, findExtension, type ExtStore, type ExtTrigger } from './extend'
 import type { History, Stat } from './history'
-import { USER, type Game } from './sync'
+import type { Game } from './sync'
 
 // Weakness knobs — how many repeats before the coach calls it (018's open question).
 export const LEFT_LINE_MIN = 2 // left the same line early in ≥2 analyzed games
@@ -174,10 +174,10 @@ export interface RatingPoint {
 // Daniel's post-game rating per rated game, split by time class, oldest first.
 // The archive JSON's white/black.rating is the same number the PGN's
 // WhiteElo/BlackElo headers carry — no PGN parsing needed.
-export function ratingHistory(games: Game[]): Record<string, RatingPoint[]> {
+export function ratingHistory(games: Game[], user: string): Record<string, RatingPoint[]> {
   const by: Record<string, RatingPoint[]> = {}
   for (const g of games) {
-    const me = g.white.username.toLowerCase() === USER ? g.white : g.black
+    const me = g.white.username.toLowerCase() === user ? g.white : g.black
     if (!g.rated || typeof me.rating !== 'number') continue
     ;(by[g.time_class] ??= []).push({ t: g.end_time ?? 0, rating: me.rating })
   }

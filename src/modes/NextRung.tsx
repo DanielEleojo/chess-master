@@ -36,11 +36,13 @@ const fresh = (a: Analysis | undefined) => !!a && a.v === ANALYSIS_V && a.ms >= 
 export function NextRung({
   lines,
   ms,
+  user,
   onGo,
   onExit,
 }: {
   lines: Line[]
   ms: Milestone | null
+  user: string
   onGo: (mode: Pick['mode'], focusLine?: string, ownOnly?: boolean) => void
   onExit: () => void
 }) {
@@ -84,12 +86,12 @@ export function NextRung({
   // table flattens under 600, so at his end of the ladder an empty report is a
   // clamping artefact, not news. The rung actually measured is labelled.
   let against = ms?.next ?? 0
-  let rep = ms && scanned.length ? gapReport(scanned, against) : null
+  let rep = ms && scanned.length ? gapReport(scanned, against, user) : null
   if (rep && ms)
     for (const m of MILESTONES.filter((x) => x > ms.next)) {
       if (rep.gaps.length) break
       against = m
-      rep = gapReport(scanned, m)
+      rep = gapReport(scanned, m, user)
     }
   const sig = rep ? `${against}:${rep.n}:${rep.gaps[0]?.key ?? 'none'}` : ''
 
@@ -122,7 +124,7 @@ export function NextRung({
       const g = todo[k]
       setBusy({ k: k + 1, of: todo.length, done: 0, total: 1 })
       try {
-        const a = await analyzeGame(g, lines, openings, eng, (d, total) =>
+        const a = await analyzeGame(g, user, lines, openings, eng, (d, total) =>
           setBusy({ k: k + 1, of: todo.length, done: d, total }),
         )
         storeRef.current.games[g.uuid] = a

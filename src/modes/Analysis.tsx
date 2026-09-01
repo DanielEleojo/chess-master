@@ -270,7 +270,7 @@ function CoachNote({
 // engine walks it at MultiPV 2, and the review renders accuracy, per-move
 // badges, the eval graph/bar, and inline retry — in chess.com's own skin
 // (mode-scoped; the scoresheet identity holds everywhere else, see map).
-export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
+export function Analysis({ lines, user, onExit }: { lines: Line[]; user: string; onExit: () => void }) {
   const [games, setGames] = useState<FullGame[]>([])
   const [loaded, setLoaded] = useState(false)
   const [unseen, setUnseen] = useState<Set<string>>(new Set())
@@ -346,7 +346,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
     setAnalysis(null)
     setProgress({ done: 0, total: 1 })
     const engine = (engRef.current ??= startEngine())
-    analyzeGame(g, lines, openingsRef.current, engine, (done, total) => setProgress({ done, total }))
+    analyzeGame(g, user, lines, openingsRef.current, engine, (done, total) => setProgress({ done, total }))
       .then((a) => {
         storeRef.current.games[g.uuid] = a
         saveAnalyses(storeRef.current)
@@ -655,7 +655,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
           {!loaded && <div className="dim">loading archives…</div>}
           <div className="gamelist">
             {games.map((g) => {
-              const { meWhite, opp, cls, mark } = gameParts(g)
+              const { meWhite, opp, cls, mark } = gameParts(g, user)
               return (
                 <button key={g.uuid} className="gamerow" onClick={() => open(g)}>
                   <span className="when">
@@ -695,7 +695,7 @@ export function Analysis({ lines, onExit }: { lines: Line[]; onExit: () => void 
       <div className="analysis ccr">
         <div className="meta">
           <button onClick={() => (setSel(null), setAnalysis(null))}>← games</button>
-          <b>{analysis?.desc ?? describeGame(sel)}</b>
+          <b>{analysis?.desc ?? describeGame(sel, user)}</b>
           <span className="dim">{new Date(sel.end_time * 1000).toLocaleDateString()}</span>
         </div>
         {progress && (

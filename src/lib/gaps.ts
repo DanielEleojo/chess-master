@@ -72,7 +72,7 @@ export interface Report {
   met: Gap[] // already at rung pace, shown as a footer so the whole scan is visible
 }
 
-export function gapReport(scanned: { game: Game; a: Analysis }[], next: number): Report {
+export function gapReport(scanned: { game: Game; a: Analysis }[], next: number, user: string): Report {
   const n = scanned.length
   const t = bandTarget(next)
   // judged runs both players — his plies are the ones his color moved on
@@ -142,7 +142,7 @@ export function gapReport(scanned: { game: Game; a: Analysis }[], next: number):
   const peak = (a: Analysis) =>
     a.evals.length ? Math.max(...a.evals.map((cp) => (a.color === 'w' ? winPct(cp) : 100 - winPct(cp)))) : 0
   const winning = scanned.filter(({ a }) => peak(a) >= WINNING_WIN)
-  const kept = winning.filter(({ game }) => gameParts(game).cls === 'win').length
+  const kept = winning.filter(({ game }) => gameParts(game, user).cls === 'win').length
   const rate = kept / (winning.length || 1)
   if (winning.length >= 3)
     add({

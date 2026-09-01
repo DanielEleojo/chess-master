@@ -7,7 +7,7 @@ import { Chess, type Move } from 'chess.js'
 import type { Line } from './pgn'
 import { sanLine, walkLine } from './facts'
 import { bookRun, type Openings } from './openings'
-import { USER, describeGame, type Game } from './sync'
+import { describeGame, type Game } from './sync'
 import type { Engine } from './engine'
 
 // Rough-take knobs — react to these first.
@@ -221,6 +221,7 @@ export function bookWalk(sans: string[], color: 'w' | 'b', lines: Line[]): BookI
 
 export async function analyzeGame(
   game: FullGame,
+  user: string,
   repertoire: Line[],
   openings: Openings,
   engine: Engine,
@@ -229,7 +230,7 @@ export async function analyzeGame(
   const c = new Chess()
   c.loadPgn(game.pgn)
   const moves = c.history({ verbose: true })
-  const color: 'w' | 'b' = game.white.username.toLowerCase() === USER ? 'w' : 'b'
+  const color: 'w' | 'b' = game.white.username.toLowerCase() === user ? 'w' : 'b'
   const fens = [new Chess().fen(), ...moves.map((m) => m.after)]
   const evals: number[] = []
   const cp2s: (number | null)[] = []
@@ -259,7 +260,7 @@ export async function analyzeGame(
     v: ANALYSIS_V,
     ms: MOVE_MS,
     color,
-    desc: describeGame(game),
+    desc: describeGame(game, user),
     endTime: game.end_time,
     evals,
     judged,
@@ -288,6 +289,7 @@ export function sparGame(
   opp: string,
   resigned: boolean,
   atSec: number,
+  user: string,
 ): FullGame {
   const drawn = !resigned && !c.isCheckmate()
   const mine = resigned
@@ -303,7 +305,7 @@ export function sparGame(
       : c.turn() !== my
         ? 'win'
         : 'checkmated'
-  const me = { username: USER, result: mine }
+  const me = { username: user, result: mine }
   const them = { username: opp, result: drawn ? mine : mine === 'win' ? 'checkmated' : 'win' }
   return {
     uuid: `spar-${atSec}`,

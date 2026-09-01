@@ -24,7 +24,7 @@ const knobs = (r: Weak) =>
 const mmss = (ms: number) =>
   Math.floor(ms / 60000) + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0')
 
-export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
+export function Spar({ lines, user, onExit }: { lines: Line[]; user: string; onExit: () => void }) {
   // ponytail: localStorage, not data/*.json — the ladder rung is one number of UI
   // state, and the training record it might feed is still fog on the map.
   // starts at the floor: everything below the current rung renders "beaten", so any
@@ -99,6 +99,7 @@ export function Spar({ lines, onExit }: { lines: Line[]; onExit: () => void }) {
         RUNGS[rungRef.current].name,
         resigned,
         Math.round(Date.now() / 1000),
+        user,
       ),
     )
   }

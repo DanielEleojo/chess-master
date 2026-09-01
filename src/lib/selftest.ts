@@ -13,7 +13,7 @@ import { applyExtension, tailGrace } from './extend'
 import { makeDrill, userMoveIdxs } from './drill'
 import { buildDeck } from './traps'
 import { bump, emptyHistory, type Stat } from './history'
-import { USER, describeGame, gameParts, monthKey, newGames, setUser, type Game } from './sync'
+import { describeGame, gameParts, monthKey, newGames, type Game } from './sync'
 import { SPAR_TC, bookWalk, flagMoves, gameAcc, judgeMoves, moveAcc, sparGame, winPct } from './analyze'
 import { bookRun, epd, type Openings } from './openings'
 import { softmaxPick, RUNGS } from './spar'
@@ -41,6 +41,9 @@ export interface Check {
 export function runChecks({ lines, traps, tactics, learn }: Seeds): Check[] {
   const res: Check[] = []
   const ok = (name: string, cond: boolean) => res.push({ name, pass: cond })
+  // The account these fixtures are written from. 028 used to need USER pinned
+  // and restored around the rating block; now it's just an argument.
+  const ME = 'babadaniel'
 
 
   // ≥: accepted line extensions (020) legitimately grow the repertoire
@@ -125,9 +128,9 @@ export function runChecks({ lines, traps, tactics, learn }: Seeds): Check[] {
   const lost = mk('b', 'timeout', 'win')
   const drew = mk('c', 'stalemate', 'stalemate')
   ok('sync diff finds only unseen uuids', newGames([won], [won, lost]).map((g) => g.uuid).join() === 'b')
-  ok('sync toast: win', describeGame(won) === 'You won vs Opp · rapid')
-  ok('sync toast: loss', describeGame(lost) === 'You lost vs Opp · rapid')
-  ok('sync toast: draw', describeGame(drew) === 'You drew vs Opp · rapid')
+  ok('sync toast: win', describeGame(won, ME) === 'You won vs Opp · rapid')
+  ok('sync toast: loss', describeGame(lost, ME) === 'You lost vs Opp · rapid')
+  ok('sync toast: draw', describeGame(drew, ME) === 'You drew vs Opp · rapid')
   ok('month key is UTC YYYY-MM', /^\d{4}-\d{2}$/.test(monthKey(new Date())))
 
   // analysis: book walk (ticket 016 — the left-book signal 003 feeds on)
@@ -316,48 +319,39 @@ export function runChecks({ lines, traps, tactics, learn }: Seeds): Check[] {
     white: { username: 'BabaDaniel', result: 'win', rating },
     black: { username: 'o', result: 'resigned' },
   })
-  // ratingHistory matches against the live USER — 028: on a fresh load this
-  // races App's own account resolution, so pin it for these fixtures and
-  // put it back rather than depend on that resolution having finished.
-  const wasUser = USER
-  setUser('babadaniel')
-  try {
-    const rh = ratingHistory([gr(3, 344), gr(1, 300), gr(2, 320), gr(1, 100, 'bullet'), { ...gr(4, 999), rated: false }])
-    ok('coach: rating history per class, sorted, rated only', rh.rapid?.length === 3 && rh.rapid[2].rating === 344 && rh.bullet?.length === 1)
-    const m = milestone(rh)!
-    ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
-    ok('coach: trend measured against earlier games', m.trend === 44)
-    ok('coach: no games, no milestone', milestone({}) === null)
+  const rh = ratingHistory([gr(3, 344), gr(1, 300), gr(2, 320), gr(1, 100, 'bullet'), { ...gr(4, 999), rated: false }], ME)
+  ok('coach: rating history per class, sorted, rated only', rh.rapid?.length === 3 && rh.rapid[2].rating === 344 && rh.bullet?.length === 1)
+  const m = milestone(rh)!
+  ok('coach: milestone headlines most-played class, next stop above current', m.timeClass === 'rapid' && m.rating === 344 && m.next === 400)
+  ok('coach: trend measured against earlier games', m.trend === 44)
+  ok('coach: no games, no milestone', milestone({}) === null)
 
-    // next rung (037) — band targets and the gap ranking over his own plies
-    ok(
-      'gap: band targets interpolate between rungs',
-      bandTarget(900).acc > bandTarget(800).acc && bandTarget(900).acc < bandTarget(1000).acc,
-    )
-    ok('gap: below the table clamps to the bottom band', bandTarget(100).blunders === bandTarget(400).blunders)
-    const gapA = (tags: Tag[], acc: number, evals = [0], book: Analysis['book'] = null): Analysis =>
-      mkA({ color: 'w', judged: tags.map((t) => ({ tag: t, acc: 50 })), acc: { w: acc, b: 50 }, evals, book })
-    // his moves are the even plies: one blunder, one mistake, the rest the opponent's
-    const messy = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['blunder', 'blunder', 'mistake', 'blunder'], 60) }))
-    const rMessy = gapReport(messy, 1000)
-    const gBl = rMessy.gaps.find((g) => g.key === 'blunders')
-    ok(
-      'gap: rates are per 100 of his own moves, not per game or per ply',
-      gBl?.mine === '50.0/100' && rMessy.gaps.find((g) => g.key === 'mistakes')?.mine === '50.0/100',
-    )
-    ok('gap: every gap ranks by shortfall and deep-links a mode', rMessy.gaps.length >= 3 && rMessy.gaps.every((g, i, xs) => !!g.mode && (i === 0 || xs[i - 1].score >= g.score)))
-    ok(`gap: no book match counts as out of book (>${BOOK_SHARE * 100}%)`, rMessy.gaps.some((g) => g.key === 'book'))
-    const inBook: Analysis['book'] = { line: 'Italian', matchedPlies: 6, leftAtPly: null, by: null, expectedSan: null, oppSan: null, outlived: false }
-    const clean = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['best', 'best', 'best', 'best'], 90, [0], inBook) }))
-    ok('gap: a scan already at the next rung reports no gaps', gapReport(clean, 1000).gaps.length === 0)
-    const thrown = [1, 2, 3, 4].map((i) => ({
-      game: { ...gr(i, 800), white: { username: 'BabaDaniel', result: 'resigned' }, black: { username: 'o', result: 'win' } },
-      a: gapA(['best', 'best'], 90, [900, 900], inBook),
-    }))
-    ok('gap: winning positions that end in losses are called out', gapReport(thrown, 1000).gaps.some((g) => g.key === 'convert'))
-  } finally {
-    setUser(wasUser)
-  }
+  // next rung (037) — band targets and the gap ranking over his own plies
+  ok(
+    'gap: band targets interpolate between rungs',
+    bandTarget(900).acc > bandTarget(800).acc && bandTarget(900).acc < bandTarget(1000).acc,
+  )
+  ok('gap: below the table clamps to the bottom band', bandTarget(100).blunders === bandTarget(400).blunders)
+  const gapA = (tags: Tag[], acc: number, evals = [0], book: Analysis['book'] = null): Analysis =>
+    mkA({ color: 'w', judged: tags.map((t) => ({ tag: t, acc: 50 })), acc: { w: acc, b: 50 }, evals, book })
+  // his moves are the even plies: one blunder, one mistake, the rest the opponent's
+  const messy = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['blunder', 'blunder', 'mistake', 'blunder'], 60) }))
+  const rMessy = gapReport(messy, 1000, ME)
+  const gBl = rMessy.gaps.find((g) => g.key === 'blunders')
+  ok(
+    'gap: rates are per 100 of his own moves, not per game or per ply',
+    gBl?.mine === '50.0/100' && rMessy.gaps.find((g) => g.key === 'mistakes')?.mine === '50.0/100',
+  )
+  ok('gap: every gap ranks by shortfall and deep-links a mode', rMessy.gaps.length >= 3 && rMessy.gaps.every((g, i, xs) => !!g.mode && (i === 0 || xs[i - 1].score >= g.score)))
+  ok(`gap: no book match counts as out of book (>${BOOK_SHARE * 100}%)`, rMessy.gaps.some((g) => g.key === 'book'))
+  const inBook: Analysis['book'] = { line: 'Italian', matchedPlies: 6, leftAtPly: null, by: null, expectedSan: null, oppSan: null, outlived: false }
+  const clean = [1, 2, 3].map((i) => ({ game: gr(i, 800), a: gapA(['best', 'best', 'best', 'best'], 90, [0], inBook) }))
+  ok('gap: a scan already at the next rung reports no gaps', gapReport(clean, 1000, ME).gaps.length === 0)
+  const thrown = [1, 2, 3, 4].map((i) => ({
+    game: { ...gr(i, 800), white: { username: 'BabaDaniel', result: 'resigned' }, black: { username: 'o', result: 'win' } },
+    a: gapA(['best', 'best'], 90, [900, 900], inBook),
+  }))
+  ok('gap: winning positions that end in losses are called out', gapReport(thrown, 1000, ME).gaps.some((g) => g.key === 'convert'))
 
   // tactics deck (ticket 013) — fen-rooted cards walked by the shared drill engine
   ok(`tactics deck loaded: ${tactics.length} cards (expect >= 300)`, tactics.length >= 300)
@@ -425,25 +419,25 @@ export function runChecks({ lines, traps, tactics, learn }: Seeds): Check[] {
   // flags it and the coach reads it with no rung of its own
   const spLoss = new Chess()
   for (const s of ['f3', 'e5', 'g4', 'Qh4#']) spLoss.move(s)
-  const sg = sparGame(spLoss, 'w', 'Rookie', false, 1000)
+  const sg = sparGame(spLoss, 'w', 'Rookie', false, 1000, ME)
   ok(
     'spar: game recorded as his own, unrated (milestone ladder stays real)',
-    sg.uuid === 'spar-1000' && sg.white.username === USER && sg.time_class === SPAR_TC && sg.rated === false,
+    sg.uuid === 'spar-1000' && sg.white.username === ME && sg.time_class === SPAR_TC && sg.rated === false,
   )
   ok(
     'spar: being mated reads as a loss',
-    describeGame(sg) === 'You lost vs Rookie · sparring' && gameParts(sg).mark === '0',
+    describeGame(sg, ME) === 'You lost vs Rookie · sparring' && gameParts(sg, ME).mark === '0',
   )
   const spBack = new Chess()
   spBack.loadPgn(sg.pgn)
   ok('spar: the game survives as pgn for the engine walk', spBack.history().join(' ') === 'f3 e5 g4 Qh4#')
   const spWin = new Chess()
   for (const s of ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#']) spWin.move(s)
-  ok('spar: his own mate reads as a win', gameParts(sparGame(spWin, 'w', 'Rookie', false, 1)).mark === '1')
-  ok('spar: resigning is a loss whatever the board says', gameParts(sparGame(spWin, 'w', 'Careless', true, 2)).mark === '0')
+  ok('spar: his own mate reads as a win', gameParts(sparGame(spWin, 'w', 'Rookie', false, 1, ME), ME).mark === '1')
+  ok('spar: resigning is a loss whatever the board says', gameParts(sparGame(spWin, 'w', 'Careless', true, 2, ME), ME).mark === '0')
   ok(
     'spar: stalemate is a half point',
-    gameParts(sparGame(new Chess('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1'), 'b', 'Rookie', false, 3)).mark === '½',
+    gameParts(sparGame(new Chess('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1'), 'b', 'Rookie', false, 3, ME), ME).mark === '½',
   )
 
 

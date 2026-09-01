@@ -4,7 +4,7 @@ import { emptyHistory, loadHistory, type History } from './lib/history'
 import { loadAnalyses } from './lib/analyze'
 import { lichessCards, loadPuzzles, ownCards, type PCard } from './lib/puzzles'
 import { milestone, ratingHistory, MILESTONES, type Milestone } from './lib/recommend'
-import { startSync, setUser, type Game } from './lib/sync'
+import { startSync, type Game } from './lib/sync'
 import { resolveChessUsername } from './lib/account'
 import { pushOfferable, subscribeToPush } from './lib/push'
 import { emptyLearn, type LearnData } from './lib/learn'
@@ -120,9 +120,12 @@ export default function App() {
 
   useEffect(() => setPushable(pushOfferable()), [])
 
-  // Rating ladder from the synced archives — read once at boot, shown in the
-  // home header and reused by the coach's pitch, so neither refetches it.
+  // Rating ladder from the synced archives — read once the account's username
+  // is known, shown in the home header and reused by the coach's pitch, so
+  // neither refetches it. Gated on chessUser: ratingHistory needs to know whose
+  // side of each game to read, and before 028's fix this raced that resolution.
   useEffect(() => {
+    if (!chessUser) return
     ;(async () => {
       const months: string[] = await fetch('/api/data/archives')
         .then((r) => (r.ok ? r.json() : []))
@@ -136,9 +139,9 @@ export default function App() {
           ),
         )
       ).flatMap((a) => a.games ?? [])
-      setMs(milestone(ratingHistory(games)))
+      setMs(milestone(ratingHistory(games, chessUser)))
     })()
-  }, [])
+  }, [chessUser])
 
   // home-card "N new" count and his own tactics cards — both refreshed each time
   // we land on home, so a game analyzed this session is dealable straight after
@@ -162,10 +165,9 @@ export default function App() {
     let stop: (() => void) | undefined
     let cancelled = false
     void resolveChessUsername().then((name) => {
-      setUser(name)
       if (cancelled) return
       setChessUser(name)
-      stop = startSync({
+      stop = startSync(name, {
         onArrivals: (msgs) =>
           setToasts((t) => [...t, ...msgs.map((text) => ({ id: ++toastId.current, text }))]),
         onSynced: setSyncedAt,
@@ -260,13 +262,13 @@ export default function App() {
       />,
     )
   if (mode === 'analysis')
-    return wrap(<Analysis key={dealNo} lines={lines} onExit={() => setMode('home')} />)
+    return wrap(<Analysis key={dealNo} lines={lines} user={chessUser} onExit={() => setMode('home')} />)
   if (mode === 'spar')
-    return wrap(<Spar key={dealNo} lines={lines} onExit={() => setMode('home')} />)
+    return wrap(<Spar key={dealNo} lines={lines} user={chessUser} onExit={() => setMode('home')} />)
   if (mode === 'learn') return wrap(<Learn key={dealNo} learn={learn} onExit={() => setMode('home')} />)
   if (mode === 'nextrung')
     return wrap(
-      <NextRung key={dealNo} lines={lines} ms={ms} onGo={go} onExit={() => setMode('home')} />,
+      <NextRung key={dealNo} lines={lines} ms={ms} user={chessUser} onGo={go} onExit={() => setMode('home')} />,
     )
   if (mode === 'selftest')
     return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} learn={learn} />)
