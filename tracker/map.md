@@ -71,7 +71,7 @@ A running local web app Daniel starts with one command and actually trains with:
 - [Next rung — what's missing for the next milestone](tickets/037-next-rung-gap-report.md) — a standing scorecard behind the ladder: the last 10 rated games in the milestone's time class are measured against a band table (accuracy / blunders / mistakes **per 100 of his own moves** — per-game was ~4x off, his games end in 8 moves as often as 80), plus two rules no table covers: out-of-book share and winning positions not converted. The 400 rung is calibrated off his own analyzed games; rows he fails become deep-linked gap rows, rows he clears a footer line, and a rung he already clears escalates to the next one. `src/modes/NextRung.tsx`, no new CSS, the top gap phrased by the existing `coachPitch`.
 ## Not yet specified
 
-(none — frontier is empty, all 37 tickets closed)
+- [Give Analysis a review session module](tickets/038-analysis-review-session.md) — `Analysis.tsx` is 828 lines and the repo's hot spot; extract the review session state machine (which ply, watching vs exploring, which variation) as `makeReview()`, mirroring `drill.ts`. Deliberately parked: a component split would only move the complexity, and the session extraction is worth doing when Analysis next grows, not before.
 
 ## Out of scope
 
