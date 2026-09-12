@@ -160,6 +160,20 @@ export function LineDrill({
     else setWhy({ text: facts.join(' '), tag: 'coach voice offline — facts only' })
   }
 
+  // Show, don't tell (requested): a repeated miss used to just draw a static
+  // arrow — now the board actually plays the expected move, then undoes it so
+  // the position is back where the user has to make it themselves.
+  function demoExpected(exp: Move) {
+    const s = st.current
+    const d = s.drill!
+    d.chess.move(exp.san)
+    syncBoard(cg.current!, d.chess, d.uc, false, [exp.from, exp.to])
+    later(700, () => {
+      d.chess.undo()
+      syncBoard(cg.current!, d.chess, d.uc, true, s.lm)
+    })
+  }
+
   function handOver() {
     const s = st.current
     const autos = s.drill!.autoMoves()
@@ -242,12 +256,12 @@ export function LineDrill({
             : `Not ${got}. Hint: it's a ${PIECE[r.exp.piece]} move — think about what the ${line.system} wants here.`,
         )
         setPrompt({ text: '✗ streak reset — try again', cls: 'bad' })
+        syncBoard(cg.current!, s.drill.chess, s.drill.uc, true, s.lm)
       } else {
-        cg.current!.setAutoShapes([{ orig: r.exp.from, dest: r.exp.to, brush: 'green' }])
-        setCoach(cmt ? `It's ${r.exp.san} — ${cmt}` : `It's ${r.exp.san}. Play it to continue.`)
+        setCoach(cmt ? `It's ${r.exp.san} — ${cmt}` : `It's ${r.exp.san}. Watch, then play it.`)
         setPrompt({ text: '✗ this line comes back soon', cls: 'bad' })
+        demoExpected(r.exp)
       }
-      syncBoard(cg.current!, s.drill.chess, s.drill.uc, true, s.lm)
     }
     paint()
   }
