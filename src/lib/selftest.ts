@@ -22,7 +22,8 @@ import { CLUSTER_MIN, milestone, pickNext, ratingHistory } from './recommend'
 import { BOOK_SHARE, bandTarget, gapReport } from './gaps'
 import { OWN_QUOTA, blunderCard, dealCards, type PCard } from './puzzles'
 import { moveKey, type LearnData } from './learn'
-import type { Analysis, Tag } from './analyze'
+import type { Analysis, FullGame, Tag } from './analyze'
+import { openingGaps } from './discover'
 
 /** The parsed seed data every check runs against — the app loads it over HTTP,
  *  scripts/selftest.ts reads the same files off disk. */
@@ -352,6 +353,57 @@ export function runChecks({ lines, traps, tactics, learn }: Seeds): Check[] {
     a: gapA(['best', 'best'], 90, [900, 900], inBook),
   }))
   ok('gap: winning positions that end in losses are called out', gapReport(thrown, 1000, ME).gaps.some((g) => g.key === 'convert'))
+
+  // opening discovery — real openings his games reach with no repertoire line,
+  // ranked by frequency and result. No engine needed: a synthetic theory map
+  // stands in for openings.tsv, so this proves the bucketing/ranking, not the
+  // vendored data.
+  const afterEpd = (...sans: string[]) => {
+    const c = new Chess()
+    for (const s of sans) c.move(s)
+    return epd(c.fen())
+  }
+  const synthOpenings: Openings = new Map([
+    [afterEpd('c4'), 'A10 English Opening'],
+    [afterEpd('c4', 'c5'), 'A10 English Opening'],
+    [afterEpd('Nf3'), 'A04 Reti Opening'],
+    [afterEpd('Nf3', 'Nf6'), 'A04 Reti Opening'],
+    [afterEpd('d4'), 'A45 Indian Game'],
+    [afterEpd('d4', 'Nf6'), 'A45 Indian Game'],
+  ])
+  const grf = (i: number, pgn: string, cls: 'win' | 'loss'): FullGame => ({
+    uuid: `d${i}`,
+    time_class: 'rapid',
+    rated: true,
+    end_time: i,
+    rules: 'chess',
+    pgn,
+    white: { username: ME, result: cls === 'win' ? 'win' : 'resigned' },
+    black: { username: 'o', result: cls === 'win' ? 'resigned' : 'win' },
+  })
+  const discGames = [
+    grf(1, '1. c4 c5', 'loss'),
+    grf(2, '1. c4 c5', 'win'),
+    grf(3, '1. Nf3 Nf6', 'loss'), // below minGames — should not surface
+    grf(4, '1. d4 Nf6', 'loss'),
+    grf(5, '1. d4 Nf6', 'loss'),
+    grf(6, '1. d4 Nf6', 'loss'),
+    grf(7, '1. e4 c6', 'loss'), // Caro-Kann — his repertoire already answers this
+  ]
+  const disc = openingGaps(discGames, ME, lines, synthOpenings)
+  ok(
+    'discover: repertoire-covered openings are excluded, thin samples need minGames',
+    disc.every((g) => g.name !== 'Indian Game' || g.games === 3) && !disc.some((g) => g.name === 'Reti Opening'),
+  )
+  const english = disc.find((g) => g.name === 'English Opening')
+  ok(
+    'discover: buckets by base name, tallies wins/losses',
+    english?.color === 'w' && english.games === 2 && english.wins === 1 && english.losses === 1,
+  )
+  ok(
+    'discover: ranked worst-first by games weighted by loss rate',
+    disc[0]?.name === 'Indian Game' && disc.every((g, i, xs) => i === 0 || xs[i - 1].score >= g.score),
+  )
 
   // tactics deck (ticket 013) — fen-rooted cards walked by the shared drill engine
   ok(`tactics deck loaded: ${tactics.length} cards (expect >= 300)`, tactics.length >= 300)

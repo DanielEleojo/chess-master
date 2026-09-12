@@ -397,6 +397,10 @@ cg-board square.move-dest:hover {
   border-color: var(--line);
   border-left-color: var(--gold);
 }
+.row.active {
+  background: var(--panel);
+  border-left-color: var(--gold);
+}
 .row .name {
   font-size: 16px;
   font-weight: 600;

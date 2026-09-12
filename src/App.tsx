@@ -20,6 +20,7 @@ import { Learn } from './modes/Learn'
 import { NextRung } from './modes/NextRung'
 import { SCAN_N } from './lib/gaps'
 import { Selftest } from './modes/Selftest'
+import { Discover } from './modes/Discover'
 
 type Mode =
   | 'home'
@@ -30,6 +31,7 @@ type Mode =
   | 'spar'
   | 'learn'
   | 'nextrung'
+  | 'discover'
   | 'selftest'
 type Toast = { id: number; text: string }
 
@@ -270,6 +272,8 @@ export default function App() {
     return wrap(
       <NextRung key={dealNo} lines={lines} ms={ms} user={chessUser} onGo={go} onExit={() => setMode('home')} />,
     )
+  if (mode === 'discover')
+    return wrap(<Discover key={dealNo} lines={lines} user={chessUser} onExit={() => setMode('home')} />)
   if (mode === 'selftest')
     return wrap(<Selftest lines={lines} traps={traps} tactics={tactics} learn={learn} />)
 
@@ -299,6 +303,10 @@ export default function App() {
             what your last {SCAN_N} games say is missing for {ms ? ms.next : 'the next rung'}
           </span>
           <span className="stat">{ms ? <><b>{ms.next - ms.rating}</b> points to go</> : 'no rating yet'}</span>
+        </button>
+        <button className="row" onClick={() => go('discover')}>
+          <span className="name">Openings to learn</span>
+          <span className="what">real openings your games reach with no repertoire answer</span>
         </button>
         <button className="row" onClick={() => go('lines')}>
           <span className="name">Line drill</span>
