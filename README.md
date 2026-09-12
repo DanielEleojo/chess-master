@@ -74,14 +74,16 @@ secret, but a fork has four values to replace in `wrangler.jsonc`:
 3. Generate your own VAPID pair for Web Push — public half into `vars`, private half via `wrangler secret put VAPID_PRIVATE_JWK`
 4. Point `VAPID_SUBJECT` at your own contact address
 
-> [!IMPORTANT]
-> Put **Cloudflare Access** in front of the Worker before exposing it. Account
-> data is keyed off the email header Access injects, and `accountId()` falls
-> back to a single shared `dev@local` account when that header is missing — so
-> a deploy without Access lets every visitor read and write the same data.
+No login is required to use the deployed site: a visitor without a Cloudflare
+Access session gets a random id minted on first visit and remembered in a
+cookie, so every browser gets its own isolated slice of KV automatically.
+Putting **Cloudflare Access** in front of the Worker is optional — it buys a
+real login (so an account follows a person across browsers/devices instead
+of being pinned to one), not data isolation, which exists either way.
 
-`scripts/migrate-to-kv.sh <namespace-id> <your-access-email>` seeds your first
-account from local `data/`.
+`scripts/migrate-to-kv.sh <namespace-id> <account-id>` seeds your first
+account from local `data/` — pass an Access login email if you've set that
+up, or the cookie value from a first visit otherwise.
 
 ## License
 

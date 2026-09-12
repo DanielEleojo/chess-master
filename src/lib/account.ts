@@ -1,5 +1,6 @@
-// Per-account chess.com username used for syncing (multi-account: each
-// Cloudflare Access login gets its own isolated data, ticket ???).
+// Per-account chess.com username used for syncing (multi-account, ticket 039:
+// each visitor — logged into Cloudflare Access or just cookied anonymously —
+// gets its own isolated data).
 // ponytail: prompt() instead of a settings page — add one if this needs to
 // be editable later, or a second site (lichess) needs supporting.
 

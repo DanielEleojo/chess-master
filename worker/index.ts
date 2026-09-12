@@ -3,12 +3,12 @@
 // without the laptop. /data/puzzles.json and /data/traps.pgn are static now
 // (public/data/), so only repertoire.pgn's read needs to hit the Worker too.
 //
-// Multi-account (ticket ???): Cloudflare Access sits in front of this Worker
-// and gates every request behind a login (email one-time-code — configure in
-// the CF dashboard, policy "Everyone" for open signup). Access injects a
-// verified email header we trust as the account id and prefix every KV key
-// with, so each login only ever sees its own data. No header (local dev,
-// Access not yet configured) falls back to one shared dev account.
+// Multi-account (ticket 039): Cloudflare Access, if put in front of this
+// Worker, gates requests behind a login and injects a verified email header
+// we trust as the account id. Most deploys won't bother with Access, so
+// without that header a random id is minted per browser on first visit and
+// remembered in a cookie — every KV key is prefixed with whichever id the
+// request carries, so visitors never share data either way.
 
 import { sendPush, type PushSubscription } from './push'
 
@@ -38,8 +38,21 @@ async function coachRoute(request: Request, env: Env): Promise<Response> {
   }
 }
 
-function accountId(request: Request): string {
-  return request.headers.get('Cf-Access-Authenticated-User-Email')?.toLowerCase() ?? 'dev@local'
+const UID_COOKIE = 'uid'
+const UID_MAX_AGE = 400 * 86400 // 400 days — the cap Chrome enforces anyway
+
+// Returns the account id plus a Set-Cookie header to attach if one had to be
+// minted (Access and an already-cookied browser need none).
+function accountId(request: Request): { uid: string; setCookie?: string } {
+  const email = request.headers.get('Cf-Access-Authenticated-User-Email')?.toLowerCase()
+  if (email) return { uid: email }
+
+  const cookie = request.headers.get('Cookie') ?? ''
+  const existing = cookie.match(new RegExp(`(?:^|;\\s*)${UID_COOKIE}=([^;]+)`))?.[1]
+  if (existing) return { uid: existing }
+
+  const uid = crypto.randomUUID()
+  return { uid, setCookie: `${UID_COOKIE}=${uid}; Path=/; Max-Age=${UID_MAX_AGE}; SameSite=Lax; Secure; HttpOnly` }
 }
 
 async function dataRoute(uid: string, name: string, request: Request, env: Env): Promise<Response> {
@@ -120,34 +133,42 @@ async function listAccounts(env: Env): Promise<string[]> {
   return [...uids]
 }
 
+async function route(uid: string, pathname: string, request: Request, env: Env): Promise<Response> {
+  if (pathname === '/data/repertoire.pgn') {
+    if (request.method !== 'GET') return new Response(null, { status: 405 })
+    const pgn = await env.DATA.get(`${uid}/repertoire.pgn`)
+    return new Response(pgn ?? '', { headers: { 'content-type': 'application/x-chess-pgn' } })
+  }
+
+  if (pathname === '/api/repertoire') {
+    if (request.method !== 'PUT') return new Response(null, { status: 405 })
+    const body = await request.text()
+    if (!body.includes('[Event ')) return new Response('not pgn', { status: 400 })
+    await env.DATA.put(`${uid}/repertoire.pgn`, body)
+    return new Response('ok')
+  }
+
+  if (pathname.startsWith('/api/data/')) {
+    return dataRoute(uid, pathname.slice('/api/data/'.length), request, env)
+  }
+
+  if (pathname === '/api/coach') {
+    return coachRoute(request, env)
+  }
+
+  return env.ASSETS.fetch(request)
+}
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url)
-    const uid = accountId(request)
-
-    if (pathname === '/data/repertoire.pgn') {
-      if (request.method !== 'GET') return new Response(null, { status: 405 })
-      const pgn = await env.DATA.get(`${uid}/repertoire.pgn`)
-      return new Response(pgn ?? '', { headers: { 'content-type': 'application/x-chess-pgn' } })
-    }
-
-    if (pathname === '/api/repertoire') {
-      if (request.method !== 'PUT') return new Response(null, { status: 405 })
-      const body = await request.text()
-      if (!body.includes('[Event ')) return new Response('not pgn', { status: 400 })
-      await env.DATA.put(`${uid}/repertoire.pgn`, body)
-      return new Response('ok')
-    }
-
-    if (pathname.startsWith('/api/data/')) {
-      return dataRoute(uid, pathname.slice('/api/data/'.length), request, env)
-    }
-
-    if (pathname === '/api/coach') {
-      return coachRoute(request, env)
-    }
-
-    return env.ASSETS.fetch(request)
+    const { uid, setCookie } = accountId(request)
+    const response = await route(uid, pathname, request, env)
+    if (!setCookie) return response
+    // ASSETS.fetch()'s response is immutable — rebuild it to attach the cookie.
+    const withCookie = new Response(response.body, response)
+    withCookie.headers.append('Set-Cookie', setCookie)
+    return withCookie
   },
 
   // Daily Cron Trigger (ticket 026): fires once per account the first day it
